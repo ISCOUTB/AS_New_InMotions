@@ -1,0 +1,15 @@
+[
+    {
+      "email": "user1@example.com",
+      "password": "password123",
+      "name": "Juan Pérez",
+      "registered_emotions": []
+    },
+    {
+      "email": "user2@example.com",
+      "password": "password456",
+      "name": "Ana González",
+      "registered_emotions": []
+    }
+  ]
+  

@@ -1,0 +1,32 @@
+name: emotion_calendar_app
+description: A new Flutter project for tracking emotions.
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.18.0 <4.0.0'  # Asegúrate de que la versión del SDK sea compatible
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  http: ^1.2.2
+  path: ^1.8.0
+  path_provider: ^2.0.5
+  intl: ^0.19.0
+  table_calendar: ^3.0.6
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  test: ^1.16.0
+  mockito: ^5.0.0
+  shared_preferences: ^2.0.15
+  crypto: ^3.0.2
+
+flutter:
+  uses-material-design: true
+  assets:    
+    - assets/instructions.json
+    - assets/users.json
+    - assets/inmotion_logo.png
