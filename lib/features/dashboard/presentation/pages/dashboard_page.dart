@@ -1,36 +1,86 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/models/mood_record_model.dart';
 import '../../../../core/routes/app_routes.dart';
-import '../../../../core/widgets/app_card.dart';
+import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/mood_visuals.dart';
 import '../../../../core/widgets/app_bottom_navigation.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../data/mock/mock_data.dart';
+import '../../../../data/repositories/auth_repository.dart';
+import '../../../../data/repositories/mood_repository.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  final MoodRepository _moodRepository = MoodRepository();
+  late Future<_DashboardMoodData> _moodDataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _moodDataFuture = _loadMoodData();
+  }
+
+  Future<_DashboardMoodData> _loadMoodData() async {
+    final todayRecord = await _moodRepository.getTodayMoodRecord();
+    final weekRecords = await _moodRepository.getCurrentWeekRecords();
+    final history = await _moodRepository.getMoodHistory();
+    final average = await _moodRepository.getWeeklyAverage();
+    return _DashboardMoodData(
+      todayRecord: todayRecord,
+      weekRecords: weekRecords,
+      history: history,
+      weeklyAverage: average,
+    );
+  }
+
+  void _reload() {
+    setState(() {
+      _moodDataFuture = _loadMoodData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _Header()),
-              SliverToBoxAdapter(
-                child: Transform.translate(
-                  offset: const Offset(0, -24),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 18),
-                    child: _QuickActionsCard(),
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: _WeekSummaryCard()),
-              const SliverToBoxAdapter(child: _ReminderCard()),
-              const SliverToBoxAdapter(child: _RecommendedArticles()),
-              const SliverToBoxAdapter(child: SizedBox(height: 96)),
-            ],
+          RefreshIndicator(
+            onRefresh: () async => _reload(),
+            child: FutureBuilder<_DashboardMoodData>(
+              future: _moodDataFuture,
+              builder: (context, snapshot) {
+                final data = snapshot.data ?? const _DashboardMoodData.empty();
+
+                return CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(child: _Header()),
+                    SliverToBoxAdapter(
+                      child: Transform.translate(
+                        offset: const Offset(0, -24),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 18),
+                          child: _QuickActionsCard(),
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(child: _TodayMoodCard(todayRecord: data.todayRecord)),
+                    SliverToBoxAdapter(child: _WeekSummaryCard(data: data)),
+                    const SliverToBoxAdapter(child: _ReminderCard()),
+                    const SliverToBoxAdapter(child: _RecommendedArticles()),
+                    const SliverToBoxAdapter(child: SizedBox(height: 96)),
+                  ],
+                );
+              },
+            ),
           ),
           const Positioned(left: 0, right: 0, bottom: 0, child: AppBottomNavigation(currentRoute: AppRoutes.dashboard)),
         ],
@@ -39,7 +89,31 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
+class _DashboardMoodData {
+  const _DashboardMoodData({
+    required this.todayRecord,
+    required this.weekRecords,
+    required this.history,
+    required this.weeklyAverage,
+  });
+
+  const _DashboardMoodData.empty()
+      : todayRecord = null,
+        weekRecords = const <MoodRecord>[],
+        history = const <MoodRecord>[],
+        weeklyAverage = 0;
+
+  final MoodRecord? todayRecord;
+  final List<MoodRecord> weekRecords;
+  final List<MoodRecord> history;
+  final double weeklyAverage;
+}
+
 class _Header extends StatelessWidget {
+  _Header();
+
+  final AuthRepository _authRepository = AuthRepository();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -60,17 +134,24 @@ class _Header extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Hola, bienvenida', style: TextStyle(color: Color(0xFFDBEAFE), fontSize: 14)),
-                SizedBox(height: 6),
-                Text(
-                  '¿Cómo te sientes hoy?',
-                  style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
-                ),
-              ],
+          Expanded(
+            child: FutureBuilder(
+              future: _authRepository.getCurrentUser(),
+              builder: (context, snapshot) {
+                final firstName = snapshot.data?.fullName.split(' ').first ?? 'estudiante';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Hola, $firstName', style: const TextStyle(color: Color(0xFFDBEAFE), fontSize: 14)),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '¿Cómo te sientes hoy?',
+                      style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           GestureDetector(
@@ -150,11 +231,85 @@ class _QuickActionsCard extends StatelessWidget {
   }
 }
 
-class _WeekSummaryCard extends StatelessWidget {
-  const _WeekSummaryCard();
+class _TodayMoodCard extends StatelessWidget {
+  const _TodayMoodCard({required this.todayRecord});
+
+  final MoodRecord? todayRecord;
 
   @override
   Widget build(BuildContext context) {
+    final record = todayRecord;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+      child: AppCard(
+        child: record == null
+            ? Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(color: AppColors.pink.withOpacity(.12), borderRadius: BorderRadius.circular(18)),
+                    child: const Icon(Icons.favorite_border_rounded, color: AppColors.pink, size: 28),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Aún no registras tu emoción de hoy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                        SizedBox(height: 4),
+                        Text('Haz tu registro diario para alimentar tu historial.', style: TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.25)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.moodLog),
+                    icon: const Icon(Icons.add_circle_rounded, color: AppColors.pink, size: 32),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(color: MoodVisuals.colorFor(record.mood).withOpacity(.14), borderRadius: BorderRadius.circular(18)),
+                    child: Icon(MoodVisuals.iconFor(record.mood), color: MoodVisuals.colorFor(record.mood), size: 32),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Hoy: ${record.mood}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 4),
+                        Text('Nivel ${record.level}/5 · ${record.tags.isEmpty ? 'sin etiquetas' : record.tags.take(2).join(', ')}', style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.history),
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 18),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _WeekSummaryCard extends StatelessWidget {
+  const _WeekSummaryCard({required this.data});
+
+  final _DashboardMoodData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final weekDays = _buildWeekDays(data.weekRecords);
+    final registeredDays = data.weekRecords.length;
+    final average = data.weeklyAverage == 0 ? '0.0' : data.weeklyAverage.toStringAsFixed(1);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
       child: AppCard(
@@ -178,20 +333,20 @@ class _WeekSummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: MockData.weekMoods.map((item) {
+              children: weekDays.map((item) {
                 return Column(
                   children: [
                     Container(
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
+                        color: item.record == null ? const Color(0xFFF3F4F6) : item.color.withOpacity(.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(item.icon, color: item.color, size: 24),
+                      child: Icon(item.icon, color: item.color, size: 23),
                     ),
                     const SizedBox(height: 7),
-                    Text(item.day, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    Text(item.dayLabel, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   ],
                 );
               }).toList(),
@@ -203,19 +358,19 @@ class _WeekSummaryCard extends StatelessWidget {
                 color: AppColors.primary.withOpacity(.10),
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.trending_up_rounded, color: AppColors.primary),
-                  SizedBox(width: 10),
+                  const Icon(Icons.trending_up_rounded, color: AppColors.primary),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text.rich(
                       TextSpan(
                         children: [
-                          TextSpan(text: '¡Buen progreso! ', style: TextStyle(fontWeight: FontWeight.w800)),
-                          TextSpan(text: 'Has registrado 5 días esta semana'),
+                          const TextSpan(text: 'Resumen local: ', style: TextStyle(fontWeight: FontWeight.w800)),
+                          TextSpan(text: '$registeredDays registros esta semana · promedio $average/5'),
                         ],
                       ),
-                      style: TextStyle(color: AppColors.primaryDark, fontSize: 13.5, height: 1.25),
+                      style: const TextStyle(color: AppColors.primaryDark, fontSize: 13.5, height: 1.25),
                     ),
                   ),
                 ],
@@ -226,6 +381,38 @@ class _WeekSummaryCard extends StatelessWidget {
       ),
     );
   }
+
+  List<_WeekMoodView> _buildWeekDays(List<MoodRecord> weekRecords) {
+    final now = DateTime.now();
+    final startOfWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+
+    return List.generate(7, (index) {
+      final day = startOfWeek.add(Duration(days: index));
+      MoodRecord? record;
+      for (final item in weekRecords) {
+        if (DateFormatter.isSameDay(item.createdAt, day)) {
+          record = item;
+          break;
+        }
+      }
+
+      return _WeekMoodView(
+        dayLabel: DateFormatter.shortWeekday(day),
+        record: record,
+        icon: record == null ? Icons.add_rounded : MoodVisuals.iconFor(record.mood),
+        color: record == null ? AppColors.textMuted : MoodVisuals.colorFor(record.mood),
+      );
+    });
+  }
+}
+
+class _WeekMoodView {
+  const _WeekMoodView({required this.dayLabel, required this.record, required this.icon, required this.color});
+
+  final String dayLabel;
+  final MoodRecord? record;
+  final IconData icon;
+  final Color color;
 }
 
 class _ReminderCard extends StatelessWidget {
@@ -264,7 +451,7 @@ class _ReminderCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Meditación diaria',
+              'Registro emocional diario',
               style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
@@ -383,74 +570,6 @@ class _ArticleTile extends StatelessWidget {
                   Text(time, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 12)),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomNavigation extends StatelessWidget {
-  const _BottomNavigation();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 10,
-        right: 10,
-        top: 10,
-        bottom: MediaQuery.of(context).padding.bottom + 8,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.08),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavItem(icon: Icons.home_rounded, label: 'Inicio', selected: true, onTap: () {}),
-          _NavItem(icon: Icons.favorite_border_rounded, label: 'Registro', onTap: () => Navigator.pushNamed(context, AppRoutes.moodLog)),
-          _NavItem(icon: Icons.menu_book_rounded, label: 'Artículos', onTap: () => Navigator.pushNamed(context, AppRoutes.articles)),
-          _NavItem(icon: Icons.person_outline_rounded, label: 'Perfil', onTap: () => Navigator.pushNamed(context, AppRoutes.profile)),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, required this.onTap, this.selected = false});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color color = selected ? AppColors.primary : Colors.grey.shade500;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 25),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(color: color, fontSize: 11, fontWeight: selected ? FontWeight.w800 : FontWeight.w500),
             ),
           ],
         ),

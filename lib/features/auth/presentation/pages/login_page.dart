@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../data/repositories/auth_repository.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/gradient_background.dart';
@@ -16,8 +17,10 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController(text: 'estudiante@utb.edu.co');
-  final TextEditingController _passwordController = TextEditingController(text: '12345678');
+  final TextEditingController _passwordController = TextEditingController(text: 'Test@12345');
+  final AuthRepository _authRepository = AuthRepository();
   bool _rememberMe = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -26,8 +29,29 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _goToDashboard() {
-    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false);
+  Future<void> _login() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await _authRepository.login(
+        email: _emailController.text,
+        password: _passwordController.text,
+        rememberMe: _rememberMe,
+      );
+
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false);
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo iniciar sesión. Inténtalo nuevamente.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -114,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      PrimaryButton(text: 'Iniciar Sesión', onPressed: _goToDashboard),
+                      PrimaryButton(text: _isLoading ? 'Ingresando...' : 'Iniciar Sesión', enabled: !_isLoading, onPressed: _login),
                       const SizedBox(height: 18),
                       Center(
                         child: Wrap(

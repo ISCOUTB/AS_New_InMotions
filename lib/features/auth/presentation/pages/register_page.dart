@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../data/repositories/auth_repository.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/gradient_background.dart';
@@ -20,7 +21,9 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  final AuthRepository _authRepository = AuthRepository();
   bool _acceptedTerms = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -32,15 +35,38 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _register() {
-    if (_passwordController.text != _confirmPasswordController.text) {
+  Future<void> _register() async {
+    if (!_acceptedTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Las contraseñas no coinciden')),
+        const SnackBar(content: Text('Debes aceptar los términos y la política de privacidad')),
       );
       return;
     }
 
-    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false);
+    setState(() => _isLoading = true);
+
+    try {
+      await _authRepository.register(
+        fullName: _nameController.text,
+        email: _emailController.text,
+        phone: _phoneController.text,
+        password: _passwordController.text,
+        confirmPassword: _confirmPasswordController.text,
+      );
+
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false);
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo crear la cuenta. Inténtalo nuevamente.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -155,8 +181,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 14),
                     PrimaryButton(
-                      text: 'Crear Cuenta',
-                      enabled: _acceptedTerms,
+                      text: _isLoading ? 'Creando cuenta...' : 'Crear Cuenta',
+                      enabled: _acceptedTerms && !_isLoading,
                       onPressed: _register,
                     ),
                     const SizedBox(height: 18),

@@ -1,7 +1,7 @@
-name: inmotions_visual
-description: Prototipo visual de la app InMotions en Flutter.
+name: as_new_inmotions
+description: Prototipo móvil de AS_New_InMotions en Flutter.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.2.0+3
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  shared_preferences: ^2.3.3
 
 dev_dependencies:
   flutter_test:

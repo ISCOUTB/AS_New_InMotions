@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../data/mock/mock_data.dart';
+import '../../../../data/repositories/mood_repository.dart';
 
 class MoodLogPage extends StatefulWidget {
   const MoodLogPage({super.key});
@@ -14,10 +16,13 @@ class MoodLogPage extends StatefulWidget {
 }
 
 class _MoodLogPageState extends State<MoodLogPage> {
-  int? _selectedMood;
-  double _intensity = 3;
-  final Set<String> _selectedActivities = {};
+  final MoodRepository _moodRepository = MoodRepository();
   final TextEditingController _notesController = TextEditingController();
+
+  String? _selectedMood;
+  double _intensity = 3;
+  final Set<String> _selectedTags = {};
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -25,21 +30,50 @@ class _MoodLogPageState extends State<MoodLogPage> {
     super.dispose();
   }
 
-  void _toggleActivity(String activity) {
+  void _toggleTag(String tag) {
     setState(() {
-      if (_selectedActivities.contains(activity)) {
-        _selectedActivities.remove(activity);
+      if (_selectedTags.contains(tag)) {
+        _selectedTags.remove(tag);
       } else {
-        _selectedActivities.add(activity);
+        _selectedTags.add(tag);
       }
     });
   }
 
-  void _save() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Registro emocional guardado visualmente')),
-    );
-    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false);
+  Future<void> _save() async {
+    final moodError = Validators.validateMoodSelection(_selectedMood);
+    final levelError = Validators.validateMoodLevel(_intensity.round());
+    final noteError = Validators.validateMoodNote(_notesController.text.trim());
+    final error = moodError ?? levelError ?? noteError;
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      await _moodRepository.saveMoodRecord(
+        mood: _selectedMood!,
+        level: _intensity.round(),
+        tags: _selectedTags.toList(),
+        note: _notesController.text,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registro emocional guardado correctamente')),
+      );
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -53,7 +87,7 @@ class _MoodLogPageState extends State<MoodLogPage> {
               padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
               child: _MoodSelector(
                 selectedMood: _selectedMood,
-                onSelected: (id) => setState(() => _selectedMood = id),
+                onSelected: (mood) => setState(() => _selectedMood = mood),
               ),
             ),
           ),
@@ -69,9 +103,9 @@ class _MoodLogPageState extends State<MoodLogPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-              child: _ActivitiesSelector(
-                selectedActivities: _selectedActivities,
-                onToggle: _toggleActivity,
+              child: _TagsSelector(
+                selectedTags: _selectedTags,
+                onToggle: _toggleTag,
               ),
             ),
           ),
@@ -85,8 +119,8 @@ class _MoodLogPageState extends State<MoodLogPage> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 22, 18, 34),
               child: PrimaryButton(
-                text: 'Guardar Registro',
-                enabled: _selectedMood != null,
+                text: _isSaving ? 'Guardando...' : 'Guardar Registro',
+                enabled: !_isSaving && _selectedMood != null,
                 gradientColors: const [AppColors.pink, AppColors.rose],
                 onPressed: _save,
               ),
@@ -134,7 +168,7 @@ class _Header extends StatelessWidget {
                 ),
                 SizedBox(height: 7),
                 Text(
-                  'Registra cómo te sientes hoy y qué actividades realizaste',
+                  'Guarda cómo te sientes hoy. Este registro queda almacenado localmente hasta conectar backend.',
                   style: TextStyle(color: Color(0xFFFCE7F3), fontSize: 14, height: 1.35),
                 ),
               ],
@@ -149,8 +183,8 @@ class _Header extends StatelessWidget {
 class _MoodSelector extends StatelessWidget {
   const _MoodSelector({required this.selectedMood, required this.onSelected});
 
-  final int? selectedMood;
-  final ValueChanged<int> onSelected;
+  final String? selectedMood;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -163,45 +197,52 @@ class _MoodSelector extends StatelessWidget {
             style: TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: MockData.emotions.map((emotion) {
-              final bool isSelected = emotion.id == selectedMood;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: InkWell(
+          GridView.builder(
+            itemCount: MockData.emotions.length,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: .95,
+            ),
+            itemBuilder: (context, index) {
+              final emotion = MockData.emotions[index];
+              final bool isSelected = emotion.name == selectedMood;
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => onSelected(emotion.name),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected ? emotion.color : const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(16),
-                    onTap: () => onSelected(emotion.id),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: isSelected ? emotion.color : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(emotion.icon, color: isSelected ? Colors.white : AppColors.textDark, size: 28),
+                      const SizedBox(height: 7),
+                      Text(
+                        emotion.name,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : AppColors.textDark,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          height: 1.05,
+                        ),
                       ),
-                      child: Column(
-                        children: [
-                          Icon(emotion.icon, color: isSelected ? Colors.white : AppColors.textDark, size: 28),
-                          const SizedBox(height: 7),
-                          Text(
-                            emotion.name,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : AppColors.textDark,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              height: 1.05,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               );
-            }).toList(),
+            },
           ),
         ],
       ),
@@ -264,10 +305,10 @@ class _IntensitySelector extends StatelessWidget {
   }
 }
 
-class _ActivitiesSelector extends StatelessWidget {
-  const _ActivitiesSelector({required this.selectedActivities, required this.onToggle});
+class _TagsSelector extends StatelessWidget {
+  const _TagsSelector({required this.selectedTags, required this.onToggle});
 
-  final Set<String> selectedActivities;
+  final Set<String> selectedTags;
   final ValueChanged<String> onToggle;
 
   @override
@@ -277,19 +318,24 @@ class _ActivitiesSelector extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '¿Qué hiciste hoy?',
+            'Etiquetas del día',
             style: TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Selecciona lo que más influyó en tu estado emocional.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
           ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
             runSpacing: 10,
-            children: MockData.activities.map((activity) {
-              final bool selected = selectedActivities.contains(activity);
+            children: MockData.activities.map((tag) {
+              final bool selected = selectedTags.contains(tag);
               return ChoiceChip(
                 selected: selected,
                 showCheckmark: false,
-                label: Text(activity),
+                label: Text(tag),
                 selectedColor: AppColors.pink,
                 backgroundColor: const Color(0xFFF3F4F6),
                 labelStyle: TextStyle(
@@ -298,7 +344,7 @@ class _ActivitiesSelector extends StatelessWidget {
                 ),
                 side: BorderSide.none,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                onSelected: (_) => onToggle(activity),
+                onSelected: (_) => onToggle(tag),
               );
             }).toList(),
           ),
@@ -320,13 +366,19 @@ class _NotesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Notas personales',
+            'Nota personal',
             style: TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Opcional. Máximo recomendado: 280 caracteres.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: controller,
             maxLines: 5,
+            maxLength: 280,
             decoration: const InputDecoration(
               hintText: 'Escribe aquí cualquier pensamiento o reflexión...',
               prefixIcon: null,

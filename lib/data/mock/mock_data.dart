@@ -79,22 +79,24 @@ class MockData {
   static const emotions = [
     EmotionOption(id: 1, name: 'Muy feliz', icon: Icons.sentiment_very_satisfied_rounded, color: AppColors.green),
     EmotionOption(id: 2, name: 'Feliz', icon: Icons.sentiment_satisfied_alt_rounded, color: Color(0xFF4ADE80)),
-    EmotionOption(id: 3, name: 'Normal', icon: Icons.sentiment_neutral_rounded, color: AppColors.yellow),
-    EmotionOption(id: 4, name: 'Triste', icon: Icons.sentiment_dissatisfied_rounded, color: AppColors.orange),
-    EmotionOption(id: 5, name: 'Muy triste', icon: Icons.cloud_queue_rounded, color: AppColors.red),
+    EmotionOption(id: 3, name: 'Tranquilo', icon: Icons.spa_rounded, color: AppColors.primary),
+    EmotionOption(id: 4, name: 'Ansioso', icon: Icons.sentiment_neutral_rounded, color: AppColors.yellow),
+    EmotionOption(id: 5, name: 'Triste', icon: Icons.sentiment_dissatisfied_rounded, color: AppColors.orange),
+    EmotionOption(id: 6, name: 'Estresado', icon: Icons.bolt_rounded, color: AppColors.purple),
+    EmotionOption(id: 7, name: 'Cansado', icon: Icons.bedtime_rounded, color: AppColors.red),
   ];
 
   static const activities = [
-    'Estudios',
+    'Ansiedad',
+    'Estrés académico',
+    'Sueño',
     'Familia',
-    'Amigos',
-    'Descanso',
-    'Ejercicio',
-    'Lectura',
-    'Meditación',
-    'Naturaleza',
-    'Hobbies',
+    'Relaciones',
+    'Parciales',
     'Trabajo',
+    'Soledad',
+    'Cansancio',
+    'Motivación',
   ];
 }
 

@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/widgets/app_bottom_navigation.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../data/repositories/auth_repository.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -16,7 +17,7 @@ class ProfilePage extends StatelessWidget {
           CustomScrollView(
             slivers: [
               SliverToBoxAdapter(child: _Header(onBack: () => Navigator.pop(context))),
-              const SliverToBoxAdapter(child: _ProfileInfoCard()),
+              SliverToBoxAdapter(child: _ProfileInfoCard()),
               const SliverToBoxAdapter(child: _StatsRow()),
               SliverToBoxAdapter(
                 child: Padding(
@@ -54,7 +55,11 @@ class ProfilePage extends StatelessWidget {
                           color: AppColors.red,
                           title: 'Cerrar sesión',
                           subtitle: 'Volver a la pantalla de bienvenida',
-                          onTap: () => Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (_) => false),
+                          onTap: () async {
+                            await AuthRepository().logout();
+                            if (!context.mounted) return;
+                            Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (_) => false);
+                          },
                         ),
                       ],
                     ),
@@ -115,7 +120,9 @@ class _Header extends StatelessWidget {
 }
 
 class _ProfileInfoCard extends StatelessWidget {
-  const _ProfileInfoCard();
+  _ProfileInfoCard();
+
+  final AuthRepository _authRepository = AuthRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -136,12 +143,27 @@ class _ProfileInfoCard extends StatelessWidget {
                 child: const Icon(Icons.person_rounded, color: Colors.white, size: 54),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Estudiante UTB',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.textDark),
+              FutureBuilder(
+                future: _authRepository.getCurrentUser(),
+                builder: (context, snapshot) {
+                  final user = snapshot.data;
+
+                  return Column(
+                    children: [
+                      Text(
+                        user?.fullName ?? 'Estudiante UTB',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.textDark),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        user?.email ?? 'estudiante@utb.edu.co',
+                        style: const TextStyle(color: AppColors.textMuted),
+                      ),
+                    ],
+                  );
+                },
               ),
-              const SizedBox(height: 4),
-              const Text('estudiante@utb.edu.co', style: TextStyle(color: AppColors.textMuted)),
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

@@ -13,6 +13,7 @@ import 'features/profile/presentation/pages/profile_page.dart';
 import 'features/reminders/presentation/pages/reminders_page.dart';
 import 'features/triage/presentation/pages/triage_page.dart';
 import 'features/triage/presentation/pages/triage_result_page.dart';
+import 'features/startup/presentation/pages/startup_page.dart';
 import 'features/welcome/presentation/pages/welcome_page.dart';
 
 class InMotionsApp extends StatelessWidget {
@@ -21,11 +22,12 @@ class InMotionsApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'InMotions',
+      title: 'AS_New_InMotions',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      initialRoute: AppRoutes.welcome,
+      initialRoute: AppRoutes.startup,
       routes: {
+        AppRoutes.startup: (_) => const StartupPage(),
         AppRoutes.welcome: (_) => const WelcomePage(),
         AppRoutes.login: (_) => const LoginPage(),
         AppRoutes.register: (_) => const RegisterPage(),
