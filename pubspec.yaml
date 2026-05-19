@@ -1,7 +1,7 @@
 name: as_new_inmotions
 description: Prototipo móvil de AS_New_InMotions en Flutter.
 publish_to: 'none'
-version: 1.5.0+6
+version: 1.7.0+8
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.3.3
+  file_picker: ^8.1.7
+  path_provider: ^2.1.5
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:

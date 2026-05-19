@@ -1,8 +1,12 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/storage/local_profile_image_storage.dart';
 import '../../../../core/widgets/app_bottom_navigation.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../data/repositories/auth_repository.dart';
@@ -22,8 +26,10 @@ class _ProfilePageState extends State<ProfilePage> {
   final MoodRepository _moodRepository = MoodRepository();
   final TriageRepository _triageRepository = TriageRepository();
   final ResourceRepository _resourceRepository = ResourceRepository();
+  final LocalProfileImageStorage _profileImageStorage = LocalProfileImageStorage();
 
   late Future<_ProfileData> _profileFuture;
+  bool _isUpdatingImage = false;
 
   @override
   void initState() {
@@ -146,6 +152,61 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _changeProfileImage() async {
+    final currentUser = await _authRepository.getCurrentUser();
+    if (currentUser == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión para actualizar tu foto de perfil.')),
+      );
+      return;
+    }
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      setState(() => _isUpdatingImage = true);
+
+      final pickedFile = result.files.single;
+      final bytes = pickedFile.bytes ?? (pickedFile.path == null ? null : await File(pickedFile.path!).readAsBytes());
+
+      if (bytes == null) {
+        throw Exception('No se pudo leer la imagen seleccionada.');
+      }
+
+      final imagePath = await _profileImageStorage.saveProfileImage(
+        userId: currentUser.id,
+        originalFileName: pickedFile.name,
+        bytes: bytes,
+      );
+
+      final updatedUser = currentUser.copyWith(profileImagePath: imagePath);
+      await _authRepository.updateCurrentUser(updatedUser);
+
+      if (!mounted) return;
+      setState(() {
+        _isUpdatingImage = false;
+        _profileFuture = _loadProfile();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto de perfil actualizada.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isUpdatingImage = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo guardar la imagen: $error')),
+      );
+    }
+  }
+
   Future<void> _logout() async {
     await _authRepository.logout();
     if (!mounted) return;
@@ -169,7 +230,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   slivers: [
                     SliverToBoxAdapter(child: _Header(onBack: () => Navigator.pop(context))),
                     const SliverToBoxAdapter(child: SizedBox(height: 14)),
-                    SliverToBoxAdapter(child: _ProfileInfoCard(user: data.user)),
+                    SliverToBoxAdapter(
+                      child: _ProfileInfoCard(
+                        user: data.user,
+                        isUpdatingImage: _isUpdatingImage,
+                        onChangeImage: _changeProfileImage,
+                      ),
+                    ),
                     SliverToBoxAdapter(child: _StatsRow(data: data)),
                     SliverToBoxAdapter(
                       child: Padding(
@@ -302,27 +369,82 @@ class _Header extends StatelessWidget {
 }
 
 class _ProfileInfoCard extends StatelessWidget {
-  const _ProfileInfoCard({required this.user});
+  const _ProfileInfoCard({
+    required this.user,
+    required this.isUpdatingImage,
+    required this.onChangeImage,
+  });
 
   final UserModel? user;
+  final bool isUpdatingImage;
+  final VoidCallback onChangeImage;
 
   @override
   Widget build(BuildContext context) {
+    final imagePath = user?.profileImagePath;
+    final hasImage = imagePath != null && imagePath.isNotEmpty && File(imagePath).existsSync();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: AppCard(
         child: Column(
           children: [
-            Container(
-              width: 82,
-              height: 82,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [AppColors.primary, AppColors.purple]),
+            GestureDetector(
+              onTap: isUpdatingImage ? null : onChangeImage,
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    width: 92,
+                    height: 92,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: hasImage ? null : const LinearGradient(colors: [AppColors.primary, AppColors.purple]),
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(.18),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: hasImage
+                          ? Image.file(
+                              File(imagePath),
+                              width: 92,
+                              height: 92,
+                              fit: BoxFit.cover,
+                            )
+                          : const Icon(Icons.person_rounded, color: Colors.white, size: 52),
+                    ),
+                  ),
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    child: isUpdatingImage
+                        ? const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 17),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.person_rounded, color: Colors.white, size: 48),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: isUpdatingImage ? null : onChangeImage,
+              icon: const Icon(Icons.add_photo_alternate_rounded, size: 18),
+              label: Text(hasImage ? 'Cambiar foto de perfil' : 'Añadir foto de perfil'),
+            ),
+            const SizedBox(height: 6),
             Text(
               user?.fullName ?? 'Estudiante UTB',
               textAlign: TextAlign.center,
@@ -333,17 +455,10 @@ class _ProfileInfoCard extends StatelessWidget {
               user?.email ?? 'estudiante@utb.edu.co',
               style: const TextStyle(color: AppColors.textMuted),
             ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.green.withOpacity(.12),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: const Text(
-                'Cuenta institucional activa',
-                style: TextStyle(color: AppColors.green, fontWeight: FontWeight.w900, fontSize: 12),
-              ),
+            const SizedBox(height: 8),
+            const Text(
+              'Perfil local del estudiante',
+              style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w700, fontSize: 12),
             ),
           ],
         ),

@@ -4,31 +4,33 @@ Prototipo móvil Flutter de **AS_New_InMotions**, app de salud mental y bienesta
 
 ## Estado actual
 
-Esta versión corresponde al **Paso 5: recordatorios locales funcionales + correcciones responsive de biblioteca**.
+Esta versión corresponde al **Paso 8: backend local inicial para autenticación**.
 
-Incluye:
+Incluye lo anterior:
 
 - Autenticación local simulada.
 - Validación de correo institucional `@utb.edu.co`.
 - Sesión local con `SharedPreferences`.
 - Registro emocional local funcional.
 - Historial emocional local funcional.
-- Triaje emocional local con 23 ítems oficiales del Anexo A.
-- Escala Likert de 1 a 5: No me identifico, Poco, Moderadamente, Bastante y Totalmente.
+- Triaje emocional local con 23 ítems oficiales.
 - Clasificación por niveles: Verde, Amarillo, Naranja, Rojo y Crítico.
-- Activación crítica si A5, F1 o F2 tienen puntaje mayor o igual a 4.
-- Resultado con recomendaciones y simulación de derivación a Psicología UTB.
-- Biblioteca de recursos local basada en el Anexo B.
-- Búsqueda, filtros por temática, formato y nivel.
-- Filtros de biblioteca corregidos para evitar overflow en pantallas pequeñas.
-- Separación visual agregada entre el encabezado azul y el primer bloque de contenido.
-- Favoritos locales con `SharedPreferences`.
-- Recomendaciones de recursos según último resultado del triaje.
-- Restricción inicial de biblioteca para resultados Rojo/Crítico hasta visualizar recursos de ayuda.
-- Recordatorios locales funcionales con `SharedPreferences`.
-- Crear, editar, activar/desactivar, eliminar y restaurar recordatorios.
-- Selector de hora y días activos para cada recordatorio.
-- Cálculo local del próximo recordatorio activo.
+- Biblioteca de recursos local.
+- Filtros responsive en biblioteca.
+- Favoritos locales.
+- Recordatorios locales funcionales.
+- Perfil con imagen local.
+- Headers superiores reducidos para que no sean invasivos.
+
+Nuevo en este paso:
+
+- Se agregó carpeta `backend/` con servidor local en Node.js.
+- Se agregaron endpoints reales para registro, login, usuario actual y logout.
+- El backend valida correo institucional `@utb.edu.co`.
+- El backend cifra contraseñas con hash PBKDF2 usando `crypto` de Node.
+- El backend genera token local tipo Bearer.
+- Flutter ahora puede usar backend local para login y registro.
+- Registro emocional, triaje, biblioteca, favoritos, recordatorios e imagen de perfil siguen funcionando localmente.
 
 ## Usuario de prueba
 
@@ -37,136 +39,143 @@ Correo: estudiante@utb.edu.co
 Contraseña: Test@12345
 ```
 
-## Flujo implementado
+## Ejecutar backend local
 
-```text
-Login → Dashboard → Triaje → 23 preguntas → Resultado → Biblioteca recomendada
-```
-
-También sigue funcionando:
-
-```text
-Dashboard → Registro emocional → Guardar → Historial
-Dashboard → Biblioteca → Buscar / Filtrar / Guardar favoritos → Detalle
-Dashboard → Recordatorios → Crear / Editar / Activar / Eliminar
-```
-
-## Triaje local
-
-Las preguntas oficiales están en:
-
-```text
-lib/data/repositories/triage_repository.dart
-```
-
-Los rangos actuales son:
-
-```text
-23 a 45 puntos: Verde / Bienestar estable
-46 a 70 puntos: Amarillo / Malestar moderado
-71 a 95 puntos: Naranja / Malestar significativo
-96 a 115 puntos: Rojo / Malestar alto
-A5, F1 o F2 >= 4: Crítico, independiente del puntaje global
-```
-
-Los umbrales están en:
-
-```text
-lib/core/constants/app_config.dart
-```
-
-## Biblioteca local
-
-Los recursos están en:
-
-```text
-lib/data/repositories/resource_repository.dart
-```
-
-El modelo, almacenamiento y visuales están en:
-
-```text
-lib/core/models/resource_model.dart
-lib/core/storage/local_resource_storage.dart
-lib/core/utils/resource_visuals.dart
-```
-
-## Recordatorios locales
-
-Los recordatorios se guardan localmente en el dispositivo con `SharedPreferences`.
-
-Archivos principales:
-
-```text
-lib/core/models/reminder_model.dart
-lib/core/storage/local_reminder_storage.dart
-lib/core/utils/reminder_visuals.dart
-lib/data/repositories/reminder_repository.dart
-lib/features/reminders/presentation/pages/reminders_page.dart
-```
-
-> Importante: este paso todavía no envía notificaciones push reales. Deja la lógica local lista para que después se conecte con Firebase Cloud Messaging o con el backend.
-
-## Archivos agregados en el Paso 5
-
-```text
-lib/core/models/reminder_model.dart
-lib/core/storage/local_reminder_storage.dart
-lib/core/utils/reminder_visuals.dart
-lib/data/repositories/reminder_repository.dart
-```
-
-## Archivos modificados en el Paso 5
-
-```text
-lib/features/articles/presentation/pages/articles_page.dart
-lib/features/reminders/presentation/pages/reminders_page.dart
-pubspec.yaml
-README.md
-```
-
-## Corrección aplicada en biblioteca
-
-Se corrigió el overflow de `DropdownButtonFormField` haciendo que los filtros sean responsive:
-
-```text
-- En pantallas angostas, Formato y Nivel se apilan verticalmente.
-- En pantallas con más espacio, Formato y Nivel se mantienen en fila.
-- Los dropdowns usan isExpanded y ellipsis para textos largos.
-```
-
-También se agregó separación entre el encabezado azul y el primer bloque de contenido.
-
-## Ejecutar
+En una terminal:
 
 ```bash
+cd backend
+npm run dev
+```
+
+Debe aparecer algo como:
+
+```text
+AS_New_InMotions backend local activo en http://localhost:3000/api
+Usuario de prueba: estudiante@utb.edu.co / Test@12345
+```
+
+Puedes probar el backend en el navegador con:
+
+```text
+http://localhost:3000/api/health
+```
+
+## Ejecutar Flutter
+
+En otra terminal, desde la raíz del proyecto Flutter:
+
+```bash
+flutter clean
 flutter pub get
 flutter run
 ```
 
-## Nota importante
+## Modo backend/local
 
-Esta versión todavía no usa backend ni base de datos en la nube. El objetivo es dejar primero toda la lógica funcional local para después reemplazar los repositorios locales por servicios API.
+La app quedó conectada al backend local para autenticación:
 
-## Paso 6 - Ajustes visuales, recordatorios y perfil local
+```text
+lib/core/constants/app_config.dart
+useRemoteBackend = true
+```
 
-Cambios incluidos:
+Si quieres volver a la autenticación 100% local sin servidor, cambia:
 
-- Headers superiores más compactos y menos invasivos en las pantallas principales.
-- Separación visual añadida entre el header y el primer bloque de contenido.
-- Eliminado el solapamiento visual en Dashboard, Historial y Perfil.
-- Recordatorios renombrados como motivos de autocuidado, con más opciones disponibles:
-  - Registrar emoción
-  - Pausa de respiración
-  - Revisar recursos
-  - Triaje mensual
-  - Descanso activo
-  - Higiene del sueño
-  - Contactar apoyo
-- Perfil actualizado con estadísticas reales locales:
-  - cantidad de registros emocionales
-  - cantidad de triajes realizados
-  - cantidad de recursos favoritos
-- Perfil con hojas informativas para Privacidad y seguridad, y Ayuda y soporte.
+```text
+useRemoteBackend = false
+```
 
-Esta versión sigue funcionando localmente, sin backend ni base de datos en la nube.
+## URLs configuradas
+
+```text
+Android emulator: http://10.0.2.2:3000/api
+Windows/macOS/Linux/iOS simulator: http://localhost:3000/api
+```
+
+Si usas un celular físico, reemplaza temporalmente la URL por la IP local de tu PC, por ejemplo:
+
+```text
+http://192.168.1.20:3000/api
+```
+
+## Cómo comprobar el Paso 8 en la app
+
+### 1. Verificar que el backend está activo
+
+Abre en el navegador:
+
+```text
+http://localhost:3000/api/health
+```
+
+Debe devolver `Backend local activo`.
+
+### 2. Probar login con backend
+
+Abre la app:
+
+```text
+Welcome → Login
+```
+
+Ingresa:
+
+```text
+estudiante@utb.edu.co
+Test@12345
+```
+
+Debe entrar al Dashboard.
+
+### 3. Probar registro con backend
+
+Abre:
+
+```text
+Welcome → Registrarse
+```
+
+Crea un usuario con correo institucional diferente, por ejemplo:
+
+```text
+prueba.backend@utb.edu.co
+```
+
+Debe crear la cuenta y entrar al Dashboard.
+
+### 4. Probar bloqueo de correo no institucional
+
+Intenta registrarte con:
+
+```text
+usuario@gmail.com
+```
+
+Debe mostrar error por no usar `@utb.edu.co`.
+
+### 5. Probar persistencia básica
+
+Después de registrar un usuario nuevo, cierra la app y vuelve a iniciar sesión con ese usuario.
+El backend guarda usuarios en:
+
+```text
+backend/data/local-users.json
+```
+
+Ese archivo es temporal y no debe subirse a GitHub.
+
+## Próximo paso sugerido
+
+**Paso 9: conectar backend local con registro emocional**.
+
+Cambios previstos:
+
+```text
+- Agregar endpoints /moods al backend local.
+- Guardar registros emocionales por usuario autenticado.
+- Conectar Flutter para guardar emociones mediante API.
+- Consultar historial emocional desde backend local.
+- Mantener triaje, biblioteca y recordatorios todavía en modo local.
+- Dejar preparada la migración posterior a MongoDB/Cosmos DB.
+```

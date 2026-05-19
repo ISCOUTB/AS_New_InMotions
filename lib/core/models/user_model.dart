@@ -4,6 +4,7 @@ class UserModel {
     required this.fullName,
     required this.email,
     this.phone,
+    this.profileImagePath,
     this.role = 'student',
     required this.createdAt,
     this.lastLoginAt,
@@ -13,6 +14,7 @@ class UserModel {
   final String fullName;
   final String email;
   final String? phone;
+  final String? profileImagePath;
   final String role;
   final DateTime createdAt;
   final DateTime? lastLoginAt;
@@ -22,6 +24,7 @@ class UserModel {
     String? fullName,
     String? email,
     String? phone,
+    String? profileImagePath,
     String? role,
     DateTime? createdAt,
     DateTime? lastLoginAt,
@@ -31,6 +34,7 @@ class UserModel {
       fullName: fullName ?? this.fullName,
       email: email ?? this.email,
       phone: phone ?? this.phone,
+      profileImagePath: profileImagePath ?? this.profileImagePath,
       role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
@@ -43,6 +47,7 @@ class UserModel {
       'fullName': fullName,
       'email': email,
       'phone': phone,
+      'profileImagePath': profileImagePath,
       'role': role,
       'createdAt': createdAt.toIso8601String(),
       'lastLoginAt': lastLoginAt?.toIso8601String(),
@@ -55,6 +60,7 @@ class UserModel {
       fullName: map['fullName'] as String,
       email: map['email'] as String,
       phone: map['phone'] as String?,
+      profileImagePath: map['profileImagePath'] as String?,
       role: map['role'] as String? ?? 'student',
       createdAt: DateTime.parse(map['createdAt'] as String),
       lastLoginAt: map['lastLoginAt'] == null ? null : DateTime.parse(map['lastLoginAt'] as String),

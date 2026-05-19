@@ -1,5 +1,7 @@
 import '../../core/constants/app_config.dart';
 import '../../core/models/user_model.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/services/auth_api_service.dart';
 import '../../core/storage/local_session_storage.dart';
 import '../../core/utils/validators.dart';
 
@@ -13,9 +15,14 @@ class AuthException implements Exception {
 }
 
 class AuthRepository {
-  AuthRepository({LocalSessionStorage? storage}) : _storage = storage ?? LocalSessionStorage();
+  AuthRepository({
+    LocalSessionStorage? storage,
+    AuthApiService? authApiService,
+  })  : _storage = storage ?? LocalSessionStorage(),
+        _authApiService = authApiService ?? AuthApiService();
 
   final LocalSessionStorage _storage;
+  final AuthApiService _authApiService;
 
   Future<UserModel> login({
     required String email,
@@ -27,14 +34,115 @@ class AuthRepository {
     _throwIfInvalid(Validators.validateInstitutionalEmail(normalizedEmail));
     _throwIfInvalid(Validators.validatePassword(password));
 
+    if (AppConfig.useRemoteBackend) {
+      return _loginRemote(email: normalizedEmail, password: password);
+    }
+
+    return _loginLocal(email: normalizedEmail, password: password);
+  }
+
+  Future<UserModel> register({
+    required String fullName,
+    required String email,
+    String? phone,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    final cleanPhone = phone?.trim();
+
+    _throwIfInvalid(Validators.validateName(fullName));
+    _throwIfInvalid(Validators.validateInstitutionalEmail(normalizedEmail));
+    _throwIfInvalid(Validators.validateOptionalPhone(cleanPhone ?? ''));
+    _throwIfInvalid(Validators.validatePassword(password));
+    _throwIfInvalid(Validators.validateConfirmPassword(password, confirmPassword));
+
+    if (AppConfig.useRemoteBackend) {
+      return _registerRemote(
+        fullName: fullName.trim(),
+        email: normalizedEmail,
+        phone: cleanPhone,
+        password: password,
+      );
+    }
+
+    return _registerLocal(
+      fullName: fullName.trim(),
+      email: normalizedEmail,
+      phone: cleanPhone,
+      password: password,
+    );
+  }
+
+  Future<UserModel?> getCurrentUser() {
+    return _storage.getCurrentUser();
+  }
+
+  Future<void> updateCurrentUser(UserModel user) {
+    return _storage.updateCurrentUser(user);
+  }
+
+  Future<bool> isLoggedIn() {
+    return _storage.isLoggedIn();
+  }
+
+  Future<void> logout() async {
+    if (AppConfig.useRemoteBackend) {
+      try {
+        await _authApiService.logout();
+      } catch (_) {
+        // Si el backend local no está disponible, igual se borra la sesión local.
+      }
+    }
+
+    await _storage.clearSession();
+  }
+
+  Future<UserModel> _loginRemote({required String email, required String password}) async {
+    try {
+      final response = await _authApiService.login(email: email, password: password);
+      final session = _parseSessionResponse(response);
+      await _storage.saveSession(token: session.token, user: session.user);
+      return session.user;
+    } on ApiException catch (error) {
+      throw AuthException(error.message);
+    } catch (_) {
+      throw AuthException('No fue posible conectar con el backend local. Verifica que esté ejecutándose.');
+    }
+  }
+
+  Future<UserModel> _registerRemote({
+    required String fullName,
+    required String email,
+    String? phone,
+    required String password,
+  }) async {
+    try {
+      final response = await _authApiService.register(
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        password: password,
+      );
+      final session = _parseSessionResponse(response);
+      await _storage.saveSession(token: session.token, user: session.user);
+      return session.user;
+    } on ApiException catch (error) {
+      throw AuthException(error.message);
+    } catch (_) {
+      throw AuthException('No fue posible conectar con el backend local. Verifica que esté ejecutándose.');
+    }
+  }
+
+  Future<UserModel> _loginLocal({required String email, required String password}) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
 
     final registeredUser = await _storage.getRegisteredUser();
     final registeredPassword = await _storage.getRegisteredPassword();
 
-    final isDemoUser = normalizedEmail == AppConfig.demoEmail && password == AppConfig.demoPassword;
+    final isDemoUser = email == AppConfig.demoEmail && password == AppConfig.demoPassword;
     final isRegisteredUser = registeredUser != null &&
-        registeredUser.email.toLowerCase() == normalizedEmail &&
+        registeredUser.email.toLowerCase() == email &&
         registeredPassword == password;
 
     if (!isDemoUser && !isRegisteredUser) {
@@ -65,39 +173,29 @@ class AuthRepository {
     return user;
   }
 
-  Future<UserModel> register({
+  Future<UserModel> _registerLocal({
     required String fullName,
     required String email,
     String? phone,
     required String password,
-    required String confirmPassword,
   }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    final cleanPhone = phone?.trim();
-
-    _throwIfInvalid(Validators.validateName(fullName));
-    _throwIfInvalid(Validators.validateInstitutionalEmail(normalizedEmail));
-    _throwIfInvalid(Validators.validateOptionalPhone(cleanPhone ?? ''));
-    _throwIfInvalid(Validators.validatePassword(password));
-    _throwIfInvalid(Validators.validateConfirmPassword(password, confirmPassword));
-
     await Future<void>.delayed(const Duration(milliseconds: 700));
 
     final registeredUser = await _storage.getRegisteredUser();
-    if (registeredUser != null && registeredUser.email.toLowerCase() == normalizedEmail) {
+    if (registeredUser != null && registeredUser.email.toLowerCase() == email) {
       throw AuthException('Ya existe una cuenta registrada con este correo');
     }
 
-    if (normalizedEmail == AppConfig.demoEmail) {
+    if (email == AppConfig.demoEmail) {
       throw AuthException('Este correo está reservado como usuario de prueba');
     }
 
     final now = DateTime.now();
     final user = UserModel(
       id: 'local-user-${now.millisecondsSinceEpoch}',
-      fullName: fullName.trim(),
-      email: normalizedEmail,
-      phone: cleanPhone == null || cleanPhone.isEmpty ? null : cleanPhone,
+      fullName: fullName,
+      email: email,
+      phone: phone == null || phone.isEmpty ? null : phone,
       role: 'student',
       createdAt: now,
       lastLoginAt: now,
@@ -109,19 +207,33 @@ class AuthRepository {
     return user;
   }
 
-  Future<UserModel?> getCurrentUser() {
-    return _storage.getCurrentUser();
-  }
+  _RemoteSession _parseSessionResponse(Map<String, dynamic> response) {
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw AuthException('Respuesta inválida del servidor');
+    }
 
-  Future<bool> isLoggedIn() {
-    return _storage.isLoggedIn();
-  }
+    final token = data['token'] as String?;
+    final userData = data['user'];
 
-  Future<void> logout() {
-    return _storage.clearSession();
+    if (token == null || token.isEmpty || userData is! Map<String, dynamic>) {
+      throw AuthException('Respuesta de autenticación incompleta');
+    }
+
+    return _RemoteSession(
+      token: token,
+      user: UserModel.fromMap(userData),
+    );
   }
 
   void _throwIfInvalid(String? error) {
     if (error != null) throw AuthException(error);
   }
+}
+
+class _RemoteSession {
+  const _RemoteSession({required this.token, required this.user});
+
+  final String token;
+  final UserModel user;
 }
