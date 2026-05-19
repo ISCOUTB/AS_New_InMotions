@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mariadb:
     image: mariadb:10.11
@@ -15,6 +13,26 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./init:/docker-entrypoint-initdb.d
+    networks:
+      - inmotions_net
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: inmotions_backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mariadb
     networks:
       - inmotions_net
 
