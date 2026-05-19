@@ -6,7 +6,7 @@ class ResourceApiService {
 
   final ApiClient _apiClient;
 
-  Future<Map<String, dynamic>> getResources({String? thematic, String? format, String? level, String? query}) {
+  Future<Map<String, dynamic>> getResources({String? thematic, String? format, String? level, String? query, bool favoritesOnly = false}) {
     return _apiClient.get(
       ApiEndpoints.resources,
       queryParameters: {
@@ -14,6 +14,7 @@ class ResourceApiService {
         if (format != null && format.isNotEmpty) 'format': format,
         if (level != null && level.isNotEmpty) 'level': level,
         if (query != null && query.isNotEmpty) 'q': query,
+        if (favoritesOnly) 'favoritesOnly': 'true',
       },
     );
   }

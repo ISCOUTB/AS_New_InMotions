@@ -1,7 +1,7 @@
 name: as_new_inmotions
 description: Prototipo móvil de AS_New_InMotions en Flutter.
 publish_to: 'none'
-version: 1.7.0+8
+version: 1.8.0+9
 
 environment:
   sdk: '>=3.4.0 <4.0.0'

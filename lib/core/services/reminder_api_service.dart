@@ -22,6 +22,10 @@ class ReminderApiService {
     return _apiClient.delete('${ApiEndpoints.reminders}/$id');
   }
 
+  Future<Map<String, dynamic>> resetDefaults() {
+    return _apiClient.post(ApiEndpoints.resetReminders);
+  }
+
   Future<Map<String, dynamic>> registerDeviceToken(String token) {
     return _apiClient.post(
       ApiEndpoints.registerDevice,

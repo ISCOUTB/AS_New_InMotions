@@ -22,5 +22,6 @@ class ApiEndpoints {
   static const String favoriteResources = '/articles/favorites';
 
   static const String reminders = '/reminders';
+  static const String resetReminders = '/reminders/reset';
   static const String registerDevice = '/devices/register';
 }

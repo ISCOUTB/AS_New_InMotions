@@ -1,14 +1,23 @@
+import '../../core/constants/app_config.dart';
 import '../../core/models/reminder_model.dart';
+import '../../core/services/reminder_api_service.dart';
 import '../../core/storage/local_reminder_storage.dart';
 import '../../core/utils/reminder_visuals.dart';
 
 class ReminderRepository {
-  ReminderRepository({LocalReminderStorage? storage}) : _storage = storage ?? LocalReminderStorage();
+  ReminderRepository({
+    LocalReminderStorage? storage,
+    ReminderApiService? apiService,
+  })  : _storage = storage ?? LocalReminderStorage(),
+        _apiService = apiService ?? ReminderApiService();
 
   final LocalReminderStorage _storage;
+  final ReminderApiService _apiService;
+
+  bool get _useBackend => AppConfig.useRemoteBackend;
 
   Future<List<ReminderModel>> getReminders() async {
-    final reminders = await _storage.getReminders();
+    final reminders = _useBackend ? await _getRemoteReminders() : await _storage.getReminders();
     reminders.sort((a, b) {
       final aMinutes = a.hour * 60 + a.minute;
       final bMinutes = b.hour * 60 + b.minute;
@@ -38,9 +47,21 @@ class ReminderRepository {
   }
 
   Future<void> saveReminder(ReminderModel reminder) async {
+    final updatedReminder = reminder.copyWith(updatedAt: DateTime.now());
+
+    if (_useBackend) {
+      final reminders = await _getRemoteReminders();
+      final exists = reminders.any((item) => item.id == reminder.id);
+      if (exists) {
+        await _apiService.updateReminder(reminder.id, updatedReminder.toJson());
+      } else {
+        await _apiService.createReminder(updatedReminder.toJson());
+      }
+      return;
+    }
+
     final reminders = await _storage.getReminders();
     final index = reminders.indexWhere((item) => item.id == reminder.id);
-    final updatedReminder = reminder.copyWith(updatedAt: DateTime.now());
 
     if (index == -1) {
       reminders.add(updatedReminder);
@@ -52,6 +73,14 @@ class ReminderRepository {
   }
 
   Future<void> toggleReminder(String id, bool enabled) async {
+    if (_useBackend) {
+      await _apiService.updateReminder(id, {
+        'enabled': enabled,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      return;
+    }
+
     final reminders = await _storage.getReminders();
     final index = reminders.indexWhere((item) => item.id == id);
     if (index == -1) return;
@@ -61,12 +90,22 @@ class ReminderRepository {
   }
 
   Future<void> deleteReminder(String id) async {
+    if (_useBackend) {
+      await _apiService.deleteReminder(id);
+      return;
+    }
+
     final reminders = await _storage.getReminders();
     reminders.removeWhere((item) => item.id == id);
     await _storage.saveReminders(reminders);
   }
 
   Future<void> resetDefaults() async {
+    if (_useBackend) {
+      await _apiService.resetDefaults();
+      return;
+    }
+
     await _storage.clearReminders();
     await _storage.getReminders();
   }
@@ -93,6 +132,17 @@ class ReminderRepository {
       createdAt: now,
       updatedAt: now,
     );
+  }
+
+  Future<List<ReminderModel>> _getRemoteReminders() async {
+    final response = await _apiService.getReminders();
+    final data = response['data'] as Map<String, dynamic>?;
+    final rawReminders = data?['reminders'];
+    if (rawReminders is! List) return <ReminderModel>[];
+    return rawReminders
+        .whereType<Map<String, dynamic>>()
+        .map(ReminderModel.fromJson)
+        .toList();
   }
 
   DateTime _nextDateForReminder(ReminderModel reminder, DateTime from) {

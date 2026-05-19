@@ -58,7 +58,7 @@ class _RemindersPageState extends State<RemindersPage> {
     await _loadReminders();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Recordatorio guardado localmente')),
+      const SnackBar(content: Text('Recordatorio guardado')),
     );
   }
 

@@ -1,5 +1,7 @@
+import '../../core/constants/app_config.dart';
 import '../../core/models/resource_model.dart';
 import '../../core/models/triage_result_model.dart';
+import '../../core/services/resource_api_service.dart';
 import '../../core/storage/local_resource_storage.dart';
 import '../../core/storage/local_triage_storage.dart';
 
@@ -7,18 +9,36 @@ class ResourceRepository {
   ResourceRepository({
     LocalResourceStorage? resourceStorage,
     LocalTriageStorage? triageStorage,
+    ResourceApiService? apiService,
   })  : _resourceStorage = resourceStorage ?? LocalResourceStorage(),
-        _triageStorage = triageStorage ?? LocalTriageStorage();
+        _triageStorage = triageStorage ?? LocalTriageStorage(),
+        _apiService = apiService ?? ResourceApiService();
 
   final LocalResourceStorage _resourceStorage;
   final LocalTriageStorage _triageStorage;
+  final ResourceApiService _apiService;
+
+  bool get _useBackend => AppConfig.useRemoteBackend;
 
   Future<List<ResourceModel>> getAllResources() async {
+    if (_useBackend) {
+      final response = await _apiService.getResources();
+      return _resourcesFromResponse(response);
+    }
+
     await Future<void>.delayed(const Duration(milliseconds: 180));
     return List<ResourceModel>.from(_resources);
   }
 
   Future<ResourceModel?> getById(String id) async {
+    if (_useBackend) {
+      final response = await _apiService.getResourceDetail(id);
+      final data = response['data'] as Map<String, dynamic>?;
+      final resource = data?['resource'];
+      if (resource is Map<String, dynamic>) return ResourceModel.fromMap(resource);
+      return null;
+    }
+
     final resources = await getAllResources();
     for (final resource in resources) {
       if (resource.id == id) return resource;
@@ -33,6 +53,17 @@ class ResourceRepository {
     String level = 'Todos',
     bool favoritesOnly = false,
   }) async {
+    if (_useBackend) {
+      final response = await _apiService.getResources(
+        query: query.trim().isEmpty ? null : query.trim(),
+        thematic: thematic == 'Todos' ? null : thematic,
+        format: format == 'Todos' ? null : format,
+        level: level == 'Todos' ? null : level,
+        favoritesOnly: favoritesOnly,
+      );
+      return _resourcesFromResponse(response);
+    }
+
     final resources = await getAllResources();
     final favoriteIds = await _resourceStorage.getFavoriteIds();
     final normalizedQuery = query.trim().toLowerCase();
@@ -72,9 +103,29 @@ class ResourceRepository {
     return filtered.take(limit).toList();
   }
 
-  Future<Set<String>> getFavoriteIds() => _resourceStorage.getFavoriteIds();
+  Future<Set<String>> getFavoriteIds() async {
+    if (_useBackend) {
+      final response = await _apiService.getFavorites();
+      final data = response['data'] as Map<String, dynamic>?;
+      final ids = data?['favoriteIds'];
+      if (ids is List) return ids.map((item) => item.toString()).toSet();
+      return <String>{};
+    }
+    return _resourceStorage.getFavoriteIds();
+  }
 
-  Future<bool> toggleFavorite(String resourceId) => _resourceStorage.toggleFavorite(resourceId);
+  Future<bool> toggleFavorite(String resourceId) async {
+    if (_useBackend) {
+      final favoriteIds = await getFavoriteIds();
+      final response = favoriteIds.contains(resourceId)
+          ? await _apiService.removeFavorite(resourceId)
+          : await _apiService.addFavorite(resourceId);
+      final data = response['data'] as Map<String, dynamic>?;
+      final isFavorite = data?['isFavorite'];
+      return isFavorite is bool ? isFavorite : !favoriteIds.contains(resourceId);
+    }
+    return _resourceStorage.toggleFavorite(resourceId);
+  }
 
   Future<bool> hasRestrictedAccessAcknowledgement() => _resourceStorage.hasAcknowledgedRedAccess();
 
@@ -93,6 +144,16 @@ class ResourceRepository {
   }
 
   List<String> getLevels() => const ['Todos', 'Verde', 'Amarillo', 'Naranja', 'Rojo'];
+
+  List<ResourceModel> _resourcesFromResponse(Map<String, dynamic> response) {
+    final data = response['data'] as Map<String, dynamic>?;
+    final rawResources = data?['resources'];
+    if (rawResources is! List) return <ResourceModel>[];
+    return rawResources
+        .whereType<Map<String, dynamic>>()
+        .map(ResourceModel.fromMap)
+        .toList();
+  }
 
   Set<String> _levelsForResult(RiskLevel? level) {
     if (level == null) return {'Verde'};
