@@ -4,33 +4,30 @@ Prototipo móvil Flutter de **AS_New_InMotions**, app de salud mental y bienesta
 
 ## Estado actual
 
-Esta versión corresponde al **Paso 8: backend local inicial para autenticación**.
+Esta versión corresponde al **Paso 9: backend local para registro emocional e historial**.
 
 Incluye lo anterior:
 
-- Autenticación local simulada.
-- Validación de correo institucional `@utb.edu.co`.
-- Sesión local con `SharedPreferences`.
-- Registro emocional local funcional.
-- Historial emocional local funcional.
+- Autenticación conectada al backend local.
+- Registro e inicio de sesión con correo institucional `@utb.edu.co`.
+- Sesión local con token Bearer guardado en `SharedPreferences`.
+- Perfil con imagen local.
 - Triaje emocional local con 23 ítems oficiales.
 - Clasificación por niveles: Verde, Amarillo, Naranja, Rojo y Crítico.
-- Biblioteca de recursos local.
-- Filtros responsive en biblioteca.
-- Favoritos locales.
+- Biblioteca de recursos local con filtros responsive y favoritos.
 - Recordatorios locales funcionales.
-- Perfil con imagen local.
 - Headers superiores reducidos para que no sean invasivos.
 
 Nuevo en este paso:
 
-- Se agregó carpeta `backend/` con servidor local en Node.js.
-- Se agregaron endpoints reales para registro, login, usuario actual y logout.
-- El backend valida correo institucional `@utb.edu.co`.
-- El backend cifra contraseñas con hash PBKDF2 usando `crypto` de Node.
-- El backend genera token local tipo Bearer.
-- Flutter ahora puede usar backend local para login y registro.
-- Registro emocional, triaje, biblioteca, favoritos, recordatorios e imagen de perfil siguen funcionando localmente.
+- Se agregaron endpoints `/moods` al backend local.
+- El backend guarda registros emocionales por usuario autenticado.
+- Flutter ahora guarda el registro emocional mediante API.
+- El Dashboard consulta el estado emocional de hoy desde el backend.
+- El Historial consulta registros desde el backend.
+- La eliminación de registros emocionales también se hace desde el backend.
+- Las estadísticas semanales se calculan desde el backend local.
+- La información se guarda temporalmente en `backend/data/local-moods.json`.
 
 ## Usuario de prueba
 
@@ -52,6 +49,7 @@ Debe aparecer algo como:
 
 ```text
 AS_New_InMotions backend local activo en http://localhost:3000/api
+Módulos activos: auth + moods
 Usuario de prueba: estudiante@utb.edu.co / Test@12345
 ```
 
@@ -73,14 +71,14 @@ flutter run
 
 ## Modo backend/local
 
-La app quedó conectada al backend local para autenticación:
+La app quedó conectada al backend local para autenticación y registro emocional:
 
 ```text
 lib/core/constants/app_config.dart
 useRemoteBackend = true
 ```
 
-Si quieres volver a la autenticación 100% local sin servidor, cambia:
+Si quieres volver al modo 100% local sin servidor, cambia:
 
 ```text
 useRemoteBackend = false
@@ -99,9 +97,9 @@ Si usas un celular físico, reemplaza temporalmente la URL por la IP local de tu
 http://192.168.1.20:3000/api
 ```
 
-## Cómo comprobar el Paso 8 en la app
+## Cómo comprobar el Paso 9 en la app
 
-### 1. Verificar que el backend está activo
+### 1. Verificar backend activo
 
 Abre en el navegador:
 
@@ -109,9 +107,9 @@ Abre en el navegador:
 http://localhost:3000/api/health
 ```
 
-Debe devolver `Backend local activo`.
+Debe devolver que el backend está activo y mostrar módulos `auth` y `moods`.
 
-### 2. Probar login con backend
+### 2. Probar login
 
 Abre la app:
 
@@ -128,54 +126,71 @@ Test@12345
 
 Debe entrar al Dashboard.
 
-### 3. Probar registro con backend
+### 3. Probar registro emocional con backend
 
 Abre:
 
 ```text
-Welcome → Registrarse
+Inicio → Registrar emoción
 ```
 
-Crea un usuario con correo institucional diferente, por ejemplo:
+Guarda una emoción con nivel, etiquetas y nota.
+
+Debe pasar esto:
 
 ```text
-prueba.backend@utb.edu.co
+- Muestra mensaje de registro guardado.
+- Regresa al Dashboard.
+- El Dashboard muestra el estado emocional de hoy.
+- El archivo backend/data/local-moods.json se crea o actualiza.
 ```
 
-Debe crear la cuenta y entrar al Dashboard.
+### 4. Probar historial desde backend
 
-### 4. Probar bloqueo de correo no institucional
-
-Intenta registrarte con:
+Abre:
 
 ```text
-usuario@gmail.com
+Menú inferior → Historial
 ```
 
-Debe mostrar error por no usar `@utb.edu.co`.
+Debe aparecer el registro que acabas de guardar.
 
-### 5. Probar persistencia básica
+### 5. Probar eliminación
 
-Después de registrar un usuario nuevo, cierra la app y vuelve a iniciar sesión con ese usuario.
-El backend guarda usuarios en:
+En Historial:
 
 ```text
-backend/data/local-users.json
+Toca un registro → Eliminar
 ```
 
-Ese archivo es temporal y no debe subirse a GitHub.
+Debe desaparecer de la app y también del archivo:
+
+```text
+backend/data/local-moods.json
+```
+
+### 6. Probar separación por usuario
+
+Registra una cuenta nueva con otro correo `@utb.edu.co`, inicia sesión y abre Historial.
+
+Debe pasar esto:
+
+```text
+- El usuario nuevo no ve los registros del usuario anterior.
+- Cada registro queda asociado al usuario autenticado.
+```
 
 ## Próximo paso sugerido
 
-**Paso 9: conectar backend local con registro emocional**.
+**Paso 10: conectar triaje emocional al backend local**.
 
 Cambios previstos:
 
 ```text
-- Agregar endpoints /moods al backend local.
-- Guardar registros emocionales por usuario autenticado.
-- Conectar Flutter para guardar emociones mediante API.
-- Consultar historial emocional desde backend local.
-- Mantener triaje, biblioteca y recordatorios todavía en modo local.
-- Dejar preparada la migración posterior a MongoDB/Cosmos DB.
+- Crear endpoints /triage/questions y /triage/submit.
+- Mover las 23 preguntas oficiales al backend local.
+- Calcular puntaje oficial del triaje en el backend.
+- Guardar resultados de triaje por usuario autenticado.
+- Activar protocolo crítico en backend si A5, F1 o F2 tienen valor >= 4.
+- Mantener biblioteca y recordatorios todavía en local.
 ```

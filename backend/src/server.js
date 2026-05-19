@@ -10,6 +10,7 @@ const INSTITUTIONAL_DOMAIN = '@utb.edu.co';
 const TOKEN_SECRET = process.env.TOKEN_SECRET || 'as-new-inmotions-local-secret-change-later';
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'local-users.json');
+const MOODS_FILE = path.join(DATA_DIR, 'local-moods.json');
 
 const demoUserSeed = {
   id: 'demo-user-utb',
@@ -22,7 +23,7 @@ const demoUserSeed = {
   password: 'Test@12345',
 };
 
-function ensureDataFile() {
+function ensureDataFiles() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
   if (!fs.existsSync(USERS_FILE)) {
@@ -32,21 +33,41 @@ function ensureDataFile() {
     });
     fs.writeFileSync(USERS_FILE, JSON.stringify([user], null, 2), 'utf8');
   }
-}
 
-function readUsers() {
-  ensureDataFile();
-  const raw = fs.readFileSync(USERS_FILE, 'utf8');
-  try {
-    return JSON.parse(raw);
-  } catch (_) {
-    return [];
+  if (!fs.existsSync(MOODS_FILE)) {
+    fs.writeFileSync(MOODS_FILE, JSON.stringify([], null, 2), 'utf8');
   }
 }
 
+function readJsonFile(filePath, fallback) {
+  ensureDataFiles();
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(raw);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function writeJsonFile(filePath, data) {
+  ensureDataFiles();
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function readUsers() {
+  return readJsonFile(USERS_FILE, []);
+}
+
 function writeUsers(users) {
-  ensureDataFile();
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  writeJsonFile(USERS_FILE, users);
+}
+
+function readMoods() {
+  return readJsonFile(MOODS_FILE, []);
+}
+
+function writeMoods(records) {
+  writeJsonFile(MOODS_FILE, records);
 }
 
 function normalizeEmail(email) {
@@ -81,6 +102,21 @@ function validateName(fullName) {
   if (!value) return 'El nombre es obligatorio';
   if (value.length < 3) return 'El nombre debe tener al menos 3 caracteres';
   return null;
+}
+
+function validateMoodPayload(body) {
+  const mood = String(body.mood || '').trim();
+  const level = Number(body.level);
+  const note = String(body.note || '').trim();
+  const tags = Array.isArray(body.tags) ? body.tags.map(tag => String(tag).trim()).filter(Boolean) : [];
+
+  if (!mood) return { error: 'Selecciona una emoción para continuar' };
+  if (!Number.isInteger(level) || level < 1 || level > 5) {
+    return { error: 'El nivel emocional debe estar entre 1 y 5' };
+  }
+  if (note.length > 500) return { error: 'La nota no debe superar los 500 caracteres' };
+
+  return { mood, level, note, tags };
 }
 
 function hashPassword(password) {
@@ -131,6 +167,18 @@ function publicUser(user) {
     role: user.role || 'student',
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt || null,
+  };
+}
+
+function publicMood(record) {
+  return {
+    id: record.id,
+    userId: record.userId,
+    mood: record.mood,
+    level: record.level,
+    tags: record.tags || [],
+    note: record.note || '',
+    createdAt: record.createdAt,
   };
 }
 
@@ -191,6 +239,30 @@ function getAuthUser(req) {
 
   const users = readUsers();
   return users.find(user => user.id === payload.sub && user.email === payload.email) || null;
+}
+
+function requireAuth(req, res) {
+  const user = getAuthUser(req);
+  if (!user) {
+    fail(res, 401, 'Sesión inválida o expirada');
+    return null;
+  }
+  return user;
+}
+
+function isSameDay(isoDate, referenceDate = new Date()) {
+  const date = new Date(isoDate);
+  return date.getFullYear() === referenceDate.getFullYear()
+    && date.getMonth() === referenceDate.getMonth()
+    && date.getDate() === referenceDate.getDate();
+}
+
+function getStartOfWeek(date = new Date()) {
+  const current = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = current.getDay() === 0 ? 7 : current.getDay();
+  current.setDate(current.getDate() - (day - 1));
+  current.setHours(0, 0, 0, 0);
+  return current;
 }
 
 async function handleRegister(req, res) {
@@ -262,9 +334,107 @@ async function handleLogin(req, res) {
 }
 
 function handleMe(req, res) {
-  const user = getAuthUser(req);
-  if (!user) return fail(res, 401, 'Sesión inválida o expirada');
+  const user = requireAuth(req, res);
+  if (!user) return;
   return ok(res, { user: publicUser(user) }, 'Usuario autenticado');
+}
+
+async function handleCreateMood(req, res) {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const body = await readRequestBody(req);
+  const validation = validateMoodPayload(body);
+  if (validation.error) return fail(res, 400, validation.error);
+
+  const now = new Date().toISOString();
+  const record = {
+    id: `mood-local-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+    userId: user.id,
+    mood: validation.mood,
+    level: validation.level,
+    tags: validation.tags,
+    note: validation.note,
+    createdAt: now,
+  };
+
+  const records = readMoods();
+  records.unshift(record);
+  writeMoods(records);
+
+  return created(res, { record: publicMood(record) }, 'Registro emocional guardado correctamente');
+}
+
+function handleGetMoods(req, res, url) {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const startDate = url.searchParams.get('startDate');
+  const endDate = url.searchParams.get('endDate');
+  const start = startDate ? new Date(startDate) : null;
+  const end = endDate ? new Date(endDate) : null;
+
+  let records = readMoods().filter(record => record.userId === user.id);
+
+  if (start && !Number.isNaN(start.getTime())) {
+    records = records.filter(record => new Date(record.createdAt) >= start);
+  }
+
+  if (end && !Number.isNaN(end.getTime())) {
+    records = records.filter(record => new Date(record.createdAt) <= end);
+  }
+
+  records.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return ok(res, { records: records.map(publicMood) }, 'Historial emocional cargado');
+}
+
+function handleGetTodayMood(req, res) {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const record = readMoods()
+    .filter(item => item.userId === user.id && isSameDay(item.createdAt))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
+
+  return ok(res, { record: record ? publicMood(record) : null }, 'Registro emocional de hoy cargado');
+}
+
+function handleWeeklyMoodStats(req, res) {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const startOfWeek = getStartOfWeek();
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+  const records = readMoods().filter(record => {
+    const createdAt = new Date(record.createdAt);
+    return record.userId === user.id && createdAt >= startOfWeek && createdAt < endOfWeek;
+  });
+
+  const total = records.reduce((sum, record) => sum + Number(record.level || 0), 0);
+  const average = records.length ? total / records.length : 0;
+
+  return ok(res, {
+    count: records.length,
+    average,
+    startDate: startOfWeek.toISOString(),
+    endDate: endOfWeek.toISOString(),
+  }, 'Estadísticas semanales cargadas');
+}
+
+function handleDeleteMood(req, res, moodId) {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const records = readMoods();
+  const index = records.findIndex(record => record.id === moodId && record.userId === user.id);
+  if (index < 0) return fail(res, 404, 'Registro emocional no encontrado');
+
+  records.splice(index, 1);
+  writeMoods(records);
+
+  return ok(res, null, 'Registro emocional eliminado');
 }
 
 async function router(req, res) {
@@ -281,6 +451,7 @@ async function router(req, res) {
         app: 'AS_New_InMotions Backend Local',
         status: 'running',
         timestamp: new Date().toISOString(),
+        modules: ['auth', 'moods'],
       }, 'Backend local activo');
     }
 
@@ -300,16 +471,38 @@ async function router(req, res) {
       return ok(res, null, 'Sesión cerrada localmente');
     }
 
+    if (req.method === 'POST' && pathname === `${API_PREFIX}/moods`) {
+      return handleCreateMood(req, res);
+    }
+
+    if (req.method === 'GET' && pathname === `${API_PREFIX}/moods`) {
+      return handleGetMoods(req, res, url);
+    }
+
+    if (req.method === 'GET' && pathname === `${API_PREFIX}/moods/today`) {
+      return handleGetTodayMood(req, res);
+    }
+
+    if (req.method === 'GET' && pathname === `${API_PREFIX}/moods/stats/weekly`) {
+      return handleWeeklyMoodStats(req, res);
+    }
+
+    if (req.method === 'DELETE' && pathname.startsWith(`${API_PREFIX}/moods/`)) {
+      const moodId = decodeURIComponent(pathname.substring(`${API_PREFIX}/moods/`.length));
+      return handleDeleteMood(req, res, moodId);
+    }
+
     return fail(res, 404, 'Ruta no encontrada');
   } catch (error) {
     return fail(res, 500, error.message || 'Error interno del servidor');
   }
 }
 
-ensureDataFile();
+ensureDataFiles();
 
 const server = http.createServer(router);
 server.listen(PORT, HOST, () => {
   console.log(`AS_New_InMotions backend local activo en http://localhost:${PORT}/api`);
+  console.log('Módulos activos: auth + moods');
   console.log('Usuario de prueba: estudiante@utb.edu.co / Test@12345');
 });

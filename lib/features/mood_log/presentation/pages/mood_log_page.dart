@@ -169,7 +169,7 @@ class _Header extends StatelessWidget {
                 ),
                 SizedBox(height: 7),
                 Text(
-                  'Guarda cómo te sientes hoy. Este registro queda almacenado localmente hasta conectar backend.',
+                  'Guarda cómo te sientes hoy. Este registro se enviará al backend local de pruebas.',
                   style: TextStyle(color: Color(0xFFFCE7F3), fontSize: 14, height: 1.35),
                 ),
               ],

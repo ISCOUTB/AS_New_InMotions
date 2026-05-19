@@ -24,6 +24,10 @@ class MoodApiService {
     return _apiClient.get(ApiEndpoints.todayMood);
   }
 
+  Future<Map<String, dynamic>> getWeeklyStats() {
+    return _apiClient.get(ApiEndpoints.weeklyMoodStats);
+  }
+
   Future<Map<String, dynamic>> deleteMoodRecord(String id) {
     return _apiClient.delete('${ApiEndpoints.moods}/$id');
   }

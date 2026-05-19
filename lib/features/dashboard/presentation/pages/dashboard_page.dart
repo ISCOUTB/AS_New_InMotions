@@ -364,7 +364,7 @@ class _WeekSummaryCard extends StatelessWidget {
                     child: Text.rich(
                       TextSpan(
                         children: [
-                          const TextSpan(text: 'Resumen local: ', style: TextStyle(fontWeight: FontWeight.w800)),
+                          const TextSpan(text: 'Resumen semanal: ', style: TextStyle(fontWeight: FontWeight.w800)),
                           TextSpan(text: '$registeredDays registros esta semana · promedio $average/5'),
                         ],
                       ),

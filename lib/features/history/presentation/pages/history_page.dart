@@ -99,7 +99,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                   children: [
                                     Icon(Icons.storage_rounded, size: 17, color: AppColors.textMuted),
                                     SizedBox(width: 5),
-                                    Text('Local', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                                    Text('Backend', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
                                   ],
                                 ),
                               ),
@@ -180,7 +180,7 @@ class _Header extends StatelessWidget {
                 ),
                 SizedBox(height: 7),
                 Text(
-                  'Consulta tus registros guardados localmente y observa tu evolución.',
+                  'Consulta tus registros guardados en el backend local y observa tu evolución.',
                   style: TextStyle(color: Color(0xFFEDE9FE), fontSize: 14, height: 1.35),
                 ),
               ],
@@ -469,7 +469,7 @@ class _HistoryDetailSheet extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: onDelete,
               icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('Eliminar registro local'),
+              label: const Text('Eliminar registro'),
             ),
           ),
         ],

@@ -1,7 +1,15 @@
-# Backend local inicial — AS_New_InMotions
+# Backend local — AS_New_InMotions
 
-Este backend corresponde al Paso 8. Es un servidor local sin base de datos en la nube.
-Guarda usuarios temporalmente en un archivo JSON dentro de `backend/data/local-users.json`.
+Este backend corresponde al **Paso 9**. Es un servidor local sin base de datos en la nube.
+
+Guarda datos temporalmente en archivos JSON dentro de `backend/data/`:
+
+```text
+data/local-users.json
+data/local-moods.json
+```
+
+Estos archivos se crean automáticamente al ejecutar el servidor y no deben subirse a GitHub.
 
 ## Requisitos
 
@@ -31,12 +39,19 @@ Contraseña: Test@12345
 
 ```text
 GET  /api/health
+
 POST /api/auth/register
 POST /api/auth/login
 GET  /api/auth/me
 POST /api/auth/logout
+
+POST   /api/moods
+GET    /api/moods
+GET    /api/moods/today
+GET    /api/moods/stats/weekly
+DELETE /api/moods/:id
 ```
 
 ## Nota
 
-Este backend todavía no usa MongoDB, Cosmos DB ni nube. Sirve para probar login y registro reales por API antes de conectar la base de datos.
+Este backend todavía no usa MongoDB, Cosmos DB ni nube. Sirve para probar autenticación, registro emocional e historial mediante API antes de conectar la base de datos real.
