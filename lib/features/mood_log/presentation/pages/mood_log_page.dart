@@ -141,13 +141,14 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 8,
         right: 18,
-        bottom: 26,
+        bottom: 20,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(colors: [AppColors.pink, AppColors.rose]),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

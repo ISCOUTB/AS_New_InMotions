@@ -238,10 +238,10 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 8,
         right: 18,
-        bottom: 38,
+        bottom: 22,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -249,7 +249,7 @@ class _Header extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [AppColors.primary, AppColors.primaryDark],
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,10 +263,10 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 12),
+                SizedBox(height: 4),
                 Text(
                   'Biblioteca de Recursos',
-                  style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
                 ),
                 SizedBox(height: 7),
                 Text(

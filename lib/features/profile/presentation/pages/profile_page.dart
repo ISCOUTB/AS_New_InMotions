@@ -1,73 +1,224 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/models/user_model.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/widgets/app_bottom_navigation.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../data/repositories/auth_repository.dart';
+import '../../../../data/repositories/mood_repository.dart';
+import '../../../../data/repositories/resource_repository.dart';
+import '../../../../data/repositories/triage_repository.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final AuthRepository _authRepository = AuthRepository();
+  final MoodRepository _moodRepository = MoodRepository();
+  final TriageRepository _triageRepository = TriageRepository();
+  final ResourceRepository _resourceRepository = ResourceRepository();
+
+  late Future<_ProfileData> _profileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileFuture = _loadProfile();
+  }
+
+  Future<_ProfileData> _loadProfile() async {
+    final user = await _authRepository.getCurrentUser();
+    final moodHistory = await _moodRepository.getMoodHistory();
+    final triageResults = await _triageRepository.getMyResults();
+    final favoriteResources = await _resourceRepository.getFavoriteIds();
+
+    return _ProfileData(
+      user: user,
+      moodCount: moodHistory.length,
+      triageCount: triageResults.length,
+      favoriteCount: favoriteResources.length,
+    );
+  }
+
+  void _reload() {
+    setState(() {
+      _profileFuture = _loadProfile();
+    });
+  }
+
+  void _showPrivacySheet() {
+    _showInfoSheet(
+      title: 'Privacidad y seguridad',
+      icon: Icons.lock_rounded,
+      color: AppColors.primary,
+      content: const [
+        'Por ahora la app guarda la sesión, registros emocionales, resultados de triaje, favoritos y recordatorios de forma local en el dispositivo.',
+        'Cuando se conecte el backend, cada petición privada deberá usar token de sesión y conexión segura por HTTPS.',
+        'El triaje no reemplaza atención psicológica profesional. En resultados de riesgo alto o crítico se deben mostrar recursos de ayuda y contacto institucional.',
+      ],
+    );
+  }
+
+  void _showSupportSheet() {
+    _showInfoSheet(
+      title: 'Ayuda y soporte',
+      icon: Icons.support_agent_rounded,
+      color: AppColors.purple,
+      content: const [
+        'Psicología UTB: bienestar@utb.edu.co',
+        'Línea 192: orientación nacional en salud mental.',
+        'Línea 123: emergencias generales si existe peligro inmediato.',
+        'Campus UTB: Bienestar Universitario – Área de Psicología.',
+      ],
+    );
+  }
+
+  void _showInfoSheet({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<String> content,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 46,
+                  height: 5,
+                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(20)),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(16)),
+                    child: Icon(icon, color: color),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...content.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Icon(Icons.circle, size: 7, color: color),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(item, style: const TextStyle(color: AppColors.textDark, fontSize: 14.5, height: 1.4)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _logout() async {
+    await _authRepository.logout();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (_) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _Header(onBack: () => Navigator.pop(context))),
-              SliverToBoxAdapter(child: _ProfileInfoCard()),
-              const SliverToBoxAdapter(child: _StatsRow()),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
-                  child: AppCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        _MenuTile(
-                          icon: Icons.notifications_rounded,
-                          color: AppColors.orange,
-                          title: 'Recordatorios',
-                          subtitle: 'Gestionar notificaciones',
-                          onTap: () => Navigator.pushNamed(context, AppRoutes.reminders),
+          RefreshIndicator(
+            onRefresh: () async => _reload(),
+            child: FutureBuilder<_ProfileData>(
+              future: _profileFuture,
+              builder: (context, snapshot) {
+                final data = snapshot.data ?? const _ProfileData.empty();
+
+                return CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(child: _Header(onBack: () => Navigator.pop(context))),
+                    const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                    SliverToBoxAdapter(child: _ProfileInfoCard(user: data.user)),
+                    SliverToBoxAdapter(child: _StatsRow(data: data)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+                        child: AppCard(
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            children: [
+                              _MenuTile(
+                                icon: Icons.notifications_rounded,
+                                color: AppColors.orange,
+                                title: 'Recordatorios',
+                                subtitle: 'Gestionar momentos de autocuidado',
+                                onTap: () => Navigator.pushNamed(context, AppRoutes.reminders).then((_) => _reload()),
+                              ),
+                              const _DividerLine(),
+                              _MenuTile(
+                                icon: Icons.lock_rounded,
+                                color: AppColors.primary,
+                                title: 'Privacidad y seguridad',
+                                subtitle: 'Ver manejo local de datos y sesión',
+                                onTap: _showPrivacySheet,
+                              ),
+                              const _DividerLine(),
+                              _MenuTile(
+                                icon: Icons.help_outline_rounded,
+                                color: AppColors.purple,
+                                title: 'Ayuda y soporte',
+                                subtitle: 'Canales de orientación y emergencia',
+                                onTap: _showSupportSheet,
+                              ),
+                              const _DividerLine(),
+                              _MenuTile(
+                                icon: Icons.logout_rounded,
+                                color: AppColors.red,
+                                title: 'Cerrar sesión',
+                                subtitle: 'Volver a la pantalla de bienvenida',
+                                onTap: _logout,
+                              ),
+                            ],
+                          ),
                         ),
-                        const _DividerLine(),
-                        _MenuTile(
-                          icon: Icons.lock_rounded,
-                          color: AppColors.primary,
-                          title: 'Privacidad y seguridad',
-                          subtitle: 'Opciones de cuenta',
-                          onTap: () {},
-                        ),
-                        const _DividerLine(),
-                        _MenuTile(
-                          icon: Icons.help_outline_rounded,
-                          color: AppColors.purple,
-                          title: 'Ayuda y soporte',
-                          subtitle: 'Canales de orientación',
-                          onTap: () {},
-                        ),
-                        const _DividerLine(),
-                        _MenuTile(
-                          icon: Icons.logout_rounded,
-                          color: AppColors.red,
-                          title: 'Cerrar sesión',
-                          subtitle: 'Volver a la pantalla de bienvenida',
-                          onTap: () async {
-                            await AuthRepository().logout();
-                            if (!context.mounted) return;
-                            Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (_) => false);
-                          },
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 108)),
-            ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 108)),
+                  ],
+                );
+              },
+            ),
           ),
           const Positioned(
             left: 0,
@@ -81,6 +232,26 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
+class _ProfileData {
+  const _ProfileData({
+    required this.user,
+    required this.moodCount,
+    required this.triageCount,
+    required this.favoriteCount,
+  });
+
+  const _ProfileData.empty()
+      : user = null,
+        moodCount = 0,
+        triageCount = 0,
+        favoriteCount = 0;
+
+  final UserModel? user;
+  final int moodCount;
+  final int triageCount;
+  final int favoriteCount;
+}
+
 class _Header extends StatelessWidget {
   const _Header({required this.onBack});
 
@@ -90,14 +261,14 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 8,
         right: 18,
-        bottom: 78,
+        bottom: 22,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(colors: [AppColors.primaryDark, AppColors.primary]),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         children: [
@@ -106,10 +277,21 @@ class _Header extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
           const Expanded(
-            child: Text(
-              'Perfil',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Perfil',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Cuenta y configuración',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFDBEAFE), fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 48),
@@ -120,64 +302,50 @@ class _Header extends StatelessWidget {
 }
 
 class _ProfileInfoCard extends StatelessWidget {
-  _ProfileInfoCard();
+  const _ProfileInfoCard({required this.user});
 
-  final AuthRepository _authRepository = AuthRepository();
+  final UserModel? user;
 
   @override
   Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: const Offset(0, -54),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        child: AppCard(
-          child: Column(
-            children: [
-              Container(
-                width: 92,
-                height: 92,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [AppColors.primary, AppColors.purple]),
-                ),
-                child: const Icon(Icons.person_rounded, color: Colors.white, size: 54),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: AppCard(
+        child: Column(
+          children: [
+            Container(
+              width: 82,
+              height: 82,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: [AppColors.primary, AppColors.purple]),
               ),
-              const SizedBox(height: 14),
-              FutureBuilder(
-                future: _authRepository.getCurrentUser(),
-                builder: (context, snapshot) {
-                  final user = snapshot.data;
-
-                  return Column(
-                    children: [
-                      Text(
-                        user?.fullName ?? 'Estudiante UTB',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.textDark),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user?.email ?? 'estudiante@utb.edu.co',
-                        style: const TextStyle(color: AppColors.textMuted),
-                      ),
-                    ],
-                  );
-                },
+              child: const Icon(Icons.person_rounded, color: Colors.white, size: 48),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              user?.fullName ?? 'Estudiante UTB',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: AppColors.textDark),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              user?.email ?? 'estudiante@utb.edu.co',
+              style: const TextStyle(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.green.withOpacity(.12),
+                borderRadius: BorderRadius.circular(30),
               ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.green.withOpacity(.12),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: const Text(
-                  'Cuenta institucional activa',
-                  style: TextStyle(color: AppColors.green, fontWeight: FontWeight.w900, fontSize: 12),
-                ),
+              child: const Text(
+                'Cuenta institucional activa',
+                style: TextStyle(color: AppColors.green, fontWeight: FontWeight.w900, fontSize: 12),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -185,23 +353,22 @@ class _ProfileInfoCard extends StatelessWidget {
 }
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow();
+  const _StatsRow({required this.data});
+
+  final _ProfileData data;
 
   @override
   Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: const Offset(0, -34),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 18),
-        child: Row(
-          children: [
-            Expanded(child: _StatCard(value: '12', label: 'registros', icon: Icons.favorite_rounded, color: AppColors.pink)),
-            SizedBox(width: 10),
-            Expanded(child: _StatCard(value: '3', label: 'triajes', icon: Icons.psychology_rounded, color: AppColors.purple)),
-            SizedBox(width: 10),
-            Expanded(child: _StatCard(value: '8', label: 'artículos', icon: Icons.menu_book_rounded, color: AppColors.primary)),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+      child: Row(
+        children: [
+          Expanded(child: _StatCard(value: data.moodCount.toString(), label: 'registros', icon: Icons.favorite_rounded, color: AppColors.pink)),
+          const SizedBox(width: 10),
+          Expanded(child: _StatCard(value: data.triageCount.toString(), label: 'triajes', icon: Icons.psychology_rounded, color: AppColors.purple)),
+          const SizedBox(width: 10),
+          Expanded(child: _StatCard(value: data.favoriteCount.toString(), label: 'favoritos', icon: Icons.bookmark_rounded, color: AppColors.primary)),
+        ],
       ),
     );
   }

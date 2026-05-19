@@ -194,13 +194,14 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 8,
         right: 18,
-        bottom: 28,
+        bottom: 20,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(colors: [AppColors.purple, AppColors.primary]),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,7 +218,7 @@ class _Header extends StatelessWidget {
                 SizedBox(height: 6),
                 Text(
                   'Triaje Emocional',
-                  style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
                 ),
                 SizedBox(height: 7),
                 Text(

@@ -63,13 +63,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverToBoxAdapter(child: _Header()),
-                    SliverToBoxAdapter(
-                      child: Transform.translate(
-                        offset: const Offset(0, -24),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 18),
-                          child: _QuickActionsCard(),
-                        ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 18),
+                        child: _QuickActionsCard(),
                       ),
                     ),
                     SliverToBoxAdapter(child: _TodayMoodCard(todayRecord: data.todayRecord)),
@@ -118,10 +116,10 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 20,
+        top: MediaQuery.of(context).padding.top + 12,
         left: 18,
         right: 18,
-        bottom: 46,
+        bottom: 24,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -129,7 +127,7 @@ class _Header extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [AppColors.primary, AppColors.primaryDark],
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,7 +145,7 @@ class _Header extends StatelessWidget {
                     const SizedBox(height: 6),
                     const Text(
                       '¿Cómo te sientes hoy?',
-                      style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
+                      style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
                     ),
                   ],
                 );

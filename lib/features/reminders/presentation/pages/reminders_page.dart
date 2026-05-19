@@ -99,7 +99,7 @@ class _RemindersPageState extends State<RemindersPage> {
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _Header(onBack: () => Navigator.pop(context))),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
@@ -174,14 +174,14 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 8,
         right: 18,
-        bottom: 38,
+        bottom: 22,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(colors: [AppColors.orange, AppColors.pink]),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,15 +195,15 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 12),
+                SizedBox(height: 4),
                 Text(
                   'Recordatorios',
-                  style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
                 ),
-                SizedBox(height: 7),
+                SizedBox(height: 5),
                 Text(
-                  'Configura alertas para cuidar tu bienestar emocional.',
-                  style: TextStyle(color: Color(0xFFFFEDD5), fontSize: 14, height: 1.35),
+                  'Elige momentos de autocuidado durante tu semana.',
+                  style: TextStyle(color: Color(0xFFFFEDD5), fontSize: 13, height: 1.3),
                 ),
               ],
             ),
@@ -457,7 +457,7 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
             DropdownButtonFormField<String>(
               value: _type,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Tipo de recordatorio'),
+              decoration: const InputDecoration(labelText: 'Motivo del recordatorio'),
               items: AppLists.reminderTypes.map((type) {
                 return DropdownMenuItem<String>(
                   value: type,

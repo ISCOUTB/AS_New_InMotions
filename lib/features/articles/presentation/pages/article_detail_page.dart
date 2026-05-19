@@ -58,7 +58,7 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.menu_book_outlined, color: AppColors.primary, size: 54),
+                const Icon(Icons.menu_book_outlined, color: AppColors.primary, size: 42),
                 const SizedBox(height: 12),
                 const Text('No se pudo abrir este recurso.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 18),
@@ -74,9 +74,10 @@ class _ArticleDetailPageState extends State<ArticleDetailPage> {
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _Header(resource: resource, isFavorite: _isFavorite, onFavorite: _toggleFavorite)),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
               child: _ResourceMetaCard(resource: resource),
             ),
           ),
@@ -126,10 +127,10 @@ class _Header extends StatelessWidget {
     final color = ResourceVisuals.colorForLevel(resource.level);
 
     return Container(
-      padding: EdgeInsets.fromLTRB(8, MediaQuery.of(context).padding.top + 12, 18, 34),
+      padding: EdgeInsets.fromLTRB(8, MediaQuery.of(context).padding.top + 8, 18, 22),
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: [color, color.withOpacity(.72)]),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,8 +153,8 @@ class _Header extends StatelessWidget {
                     _WhiteChip(text: resource.format),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Text(resource.title, style: const TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900, height: 1.12)),
+                const SizedBox(height: 10),
+                Text(resource.title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, height: 1.12)),
                 const SizedBox(height: 8),
                 Text(resource.thematic, style: TextStyle(color: Colors.white.withOpacity(.88), fontSize: 14, fontWeight: FontWeight.w700)),
               ],

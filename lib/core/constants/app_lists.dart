@@ -44,9 +44,12 @@ class AppLists {
   ];
 
   static const List<String> reminderTypes = [
-    'Registro emocional',
-    'Triaje emocional',
-    'Lectura de artículo',
-    'Respiración consciente',
+    'Registrar emoción',
+    'Pausa de respiración',
+    'Revisar recursos',
+    'Triaje mensual',
+    'Descanso activo',
+    'Higiene del sueño',
+    'Contactar apoyo',
   ];
 }

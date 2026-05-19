@@ -66,7 +66,7 @@ class _TriageResultPageState extends State<TriageResultPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.analytics_outlined, color: AppColors.purple, size: 54),
+                const Icon(Icons.analytics_outlined, color: AppColors.purple, size: 42),
                 const SizedBox(height: 14),
                 const Text(
                   'Aún no hay un resultado de triaje guardado.',
@@ -93,9 +93,10 @@ class _TriageResultPageState extends State<TriageResultPage> {
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _Header(result: result)),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
               child: _MessageCard(result: result),
             ),
           ),
@@ -154,10 +155,10 @@ class _Header extends StatelessWidget {
     final icon = TriageVisuals.iconForRiskLevel(result.riskLevel);
 
     return Container(
-      padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 24, 18, 34),
+      padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 10, 18, 22),
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: [color, color.withOpacity(.72)]),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -177,17 +178,17 @@ class _Header extends StatelessWidget {
               const SizedBox(width: 48),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
           Container(
-            width: 96,
-            height: 96,
+            width: 76,
+            height: 76,
             decoration: BoxDecoration(color: Colors.white.withOpacity(.20), shape: BoxShape.circle),
-            child: Icon(icon, color: Colors.white, size: 54),
+            child: Icon(icon, color: Colors.white, size: 42),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Text(
             'Riesgo ${result.riskLevel.label}',
-            style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900),
+            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
           Text(

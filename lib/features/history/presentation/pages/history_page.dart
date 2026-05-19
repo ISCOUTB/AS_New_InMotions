@@ -69,6 +69,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverToBoxAdapter(child: _Header(onBack: () => Navigator.pop(context))),
+                    const SliverToBoxAdapter(child: SizedBox(height: 14)),
                     if (isLoading)
                       const SliverFillRemaining(
                         hasScrollBody: false,
@@ -147,10 +148,10 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 8,
         right: 18,
-        bottom: 32,
+        bottom: 22,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -158,7 +159,7 @@ class _Header extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [AppColors.primary, AppColors.purple],
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,7 +176,7 @@ class _Header extends StatelessWidget {
                 SizedBox(height: 6),
                 Text(
                   'Historial Emocional',
-                  style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
                 ),
                 SizedBox(height: 7),
                 Text(
@@ -203,31 +204,28 @@ class _SummaryCards extends StatelessWidget {
         ? '0.0/5'
         : '${(records.fold<int>(0, (sum, record) => sum + record.level) / records.length).toStringAsFixed(1)}/5';
 
-    return Transform.translate(
-      offset: const Offset(0, -20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        child: Row(
-          children: [
-            Expanded(
-              child: _MiniSummaryCard(
-                title: '$total ${total == 1 ? 'día' : 'días'}',
-                subtitle: 'registrados',
-                icon: Icons.calendar_today_rounded,
-                color: AppColors.primary,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Row(
+        children: [
+          Expanded(
+            child: _MiniSummaryCard(
+              title: '$total ${total == 1 ? 'día' : 'días'}',
+              subtitle: 'registrados',
+              icon: Icons.calendar_today_rounded,
+              color: AppColors.primary,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MiniSummaryCard(
-                title: average,
-                subtitle: 'promedio',
-                icon: Icons.trending_up_rounded,
-                color: AppColors.green,
-              ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _MiniSummaryCard(
+              title: average,
+              subtitle: 'promedio',
+              icon: Icons.trending_up_rounded,
+              color: AppColors.green,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -147,3 +147,26 @@ flutter run
 ## Nota importante
 
 Esta versión todavía no usa backend ni base de datos en la nube. El objetivo es dejar primero toda la lógica funcional local para después reemplazar los repositorios locales por servicios API.
+
+## Paso 6 - Ajustes visuales, recordatorios y perfil local
+
+Cambios incluidos:
+
+- Headers superiores más compactos y menos invasivos en las pantallas principales.
+- Separación visual añadida entre el header y el primer bloque de contenido.
+- Eliminado el solapamiento visual en Dashboard, Historial y Perfil.
+- Recordatorios renombrados como motivos de autocuidado, con más opciones disponibles:
+  - Registrar emoción
+  - Pausa de respiración
+  - Revisar recursos
+  - Triaje mensual
+  - Descanso activo
+  - Higiene del sueño
+  - Contactar apoyo
+- Perfil actualizado con estadísticas reales locales:
+  - cantidad de registros emocionales
+  - cantidad de triajes realizados
+  - cantidad de recursos favoritos
+- Perfil con hojas informativas para Privacidad y seguridad, y Ayuda y soporte.
+
+Esta versión sigue funcionando localmente, sin backend ni base de datos en la nube.
