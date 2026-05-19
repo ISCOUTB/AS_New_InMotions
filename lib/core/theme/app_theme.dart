@@ -11,7 +11,7 @@ class AppTheme {
         seedColor: AppColors.primary,
         primary: AppColors.primary,
         secondary: AppColors.pink,
-        background: AppColors.background,
+        surface : AppColors.background,
       ),
       fontFamily: 'Roboto',
       appBarTheme: const AppBarTheme(

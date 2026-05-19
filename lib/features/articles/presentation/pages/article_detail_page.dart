@@ -129,7 +129,7 @@ class _Header extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(8, MediaQuery.of(context).padding.top + 8, 18, 22),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withOpacity(.72)]),
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.72)]),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
@@ -156,7 +156,7 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(resource.title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, height: 1.12)),
                 const SizedBox(height: 8),
-                Text(resource.thematic, style: TextStyle(color: Colors.white.withOpacity(.88), fontSize: 14, fontWeight: FontWeight.w700)),
+                Text(resource.thematic, style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontSize: 14, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -179,7 +179,7 @@ class _WhiteChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(.18), borderRadius: BorderRadius.circular(30)),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(30)),
       child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }
@@ -199,7 +199,7 @@ class _ResourceMetaCard extends StatelessWidget {
           Container(
             width: 60,
             height: 60,
-            decoration: BoxDecoration(color: color.withOpacity(.14), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)),
             child: Icon(ResourceVisuals.iconForFormat(resource.format), color: color, size: 32),
           ),
           const SizedBox(width: 14),

@@ -1,20 +1,45 @@
 # Backend local — AS_New_InMotions
 
-Este backend corresponde al **Paso 12**. Es un servidor local sin base de datos en la nube.
+Este backend corresponde al **Paso 13**. Sigue usando almacenamiento local en archivos JSON, pero ahora está **modularizado** para que sea más fácil migrarlo luego a MongoDB, MongoDB Atlas o Azure Cosmos DB.
 
-Guarda datos temporalmente en archivos JSON dentro de `backend/data/`:
+## Estructura nueva
 
 ```text
-data/local-users.json
-data/local-moods.json
-data/local-triage-results.json
-data/local-referrals.json
-data/local-resource-favorites.json
-data/local-reminders.json
-data/local-devices.json
+backend/src/
+ ├── server.js
+ ├── config/
+ │   └── appConfig.js
+ ├── routes/
+ │   └── router.js
+ ├── controllers/
+ │   ├── authController.js
+ │   ├── moodController.js
+ │   ├── triageController.js
+ │   ├── resourceController.js
+ │   ├── reminderController.js
+ │   └── healthController.js
+ ├── middleware/
+ │   └── auth.js
+ ├── storage/
+ │   ├── jsonStore.js
+ │   └── localDatabase.js
+ ├── catalogs/
+ │   ├── triageQuestions.js
+ │   ├── resourceCatalog.js
+ │   └── reminderCatalog.js
+ └── utils/
+     ├── http.js
+     ├── security.js
+     ├── validators.js
+     ├── presenters.js
+     └── dateUtils.js
 ```
 
-Estos archivos se crean automáticamente al ejecutar el servidor y no deben subirse a GitHub.
+El archivo anterior quedó como respaldo en:
+
+```text
+backend/src/server.legacy.js
+```
 
 ## Requisitos
 
@@ -33,12 +58,41 @@ Servidor por defecto:
 http://localhost:3000/api
 ```
 
+## Variables de entorno
+
+Copia `.env.example` como `.env` si quieres modificar la configuración local.
+
+```text
+PORT=3000
+HOST=0.0.0.0
+API_PREFIX=/api
+INSTITUTIONAL_DOMAIN=@utb.edu.co
+PSYCHOLOGY_EMAIL=bienestar@utb.edu.co
+TOKEN_SECRET=change-this-secret-before-production
+```
+
 ## Usuario de prueba
 
 ```text
 Correo: estudiante@utb.edu.co
 Contraseña: Test@12345
 ```
+
+## Datos locales
+
+Se guardan temporalmente en:
+
+```text
+backend/data/local-users.json
+backend/data/local-moods.json
+backend/data/local-triage-results.json
+backend/data/local-referrals.json
+backend/data/local-resource-favorites.json
+backend/data/local-reminders.json
+backend/data/local-devices.json
+```
+
+Estos archivos no deben subirse a GitHub.
 
 ## Endpoints incluidos
 
@@ -73,16 +127,9 @@ POST   /api/reminders
 PUT    /api/reminders/:id
 DELETE /api/reminders/:id
 POST   /api/reminders/reset
-
 POST   /api/devices/register
 ```
 
-## Recordatorios locales
+## Qué queda listo para el siguiente paso
 
-Los recordatorios se guardan por usuario autenticado. El backend crea recordatorios por defecto cuando un usuario entra por primera vez a `/api/reminders`.
-
-Todavía no se envían notificaciones push reales. El endpoint `/api/devices/register` queda preparado para registrar tokens cuando se integre Firebase/FCM.
-
-## Nota
-
-Este backend todavía no usa MongoDB, Cosmos DB ni nube. Sirve para probar autenticación, registro emocional, historial, triaje, biblioteca y recordatorios mediante API antes de conectar la base de datos real.
+La lógica ya está separada por capas. En el Paso 14 se puede crear una capa de repositorios de persistencia para cambiar de JSON local a MongoDB/Cosmos DB sin reescribir controladores ni pantallas Flutter.

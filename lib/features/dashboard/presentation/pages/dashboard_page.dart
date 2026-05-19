@@ -247,7 +247,7 @@ class _TodayMoodCard extends StatelessWidget {
                   Container(
                     width: 52,
                     height: 52,
-                    decoration: BoxDecoration(color: AppColors.pink.withOpacity(.12), borderRadius: BorderRadius.circular(18)),
+                    decoration: BoxDecoration(color: AppColors.pink.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(18)),
                     child: const Icon(Icons.favorite_border_rounded, color: AppColors.pink, size: 28),
                   ),
                   const SizedBox(width: 14),
@@ -272,7 +272,7 @@ class _TodayMoodCard extends StatelessWidget {
                   Container(
                     width: 56,
                     height: 56,
-                    decoration: BoxDecoration(color: MoodVisuals.colorFor(record.mood).withOpacity(.14), borderRadius: BorderRadius.circular(18)),
+                    decoration: BoxDecoration(color: MoodVisuals.colorFor(record.mood).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(18)),
                     child: Icon(MoodVisuals.iconFor(record.mood), color: MoodVisuals.colorFor(record.mood), size: 32),
                   ),
                   const SizedBox(width: 14),
@@ -338,7 +338,7 @@ class _WeekSummaryCard extends StatelessWidget {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: item.record == null ? const Color(0xFFF3F4F6) : item.color.withOpacity(.15),
+                        color: item.record == null ? const Color(0xFFF3F4F6) : item.color.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(item.icon, color: item.color, size: 23),
@@ -353,7 +353,7 @@ class _WeekSummaryCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(.10),
+                color: AppColors.primary.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Row(
@@ -428,7 +428,7 @@ class _ReminderCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: AppColors.purple.withOpacity(.25),
+              color: AppColors.purple.withValues(alpha: 0.25),
               blurRadius: 22,
               offset: const Offset(0, 10),
             ),
@@ -453,7 +453,7 @@ class _ReminderCard extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
-            Text('Hoy a las 8:00 PM', style: TextStyle(color: Colors.white.withOpacity(.80), fontSize: 14)),
+            Text('Hoy a las 8:00 PM', style: TextStyle(color: Colors.white.withValues(alpha: 0.80), fontSize: 14)),
             const SizedBox(height: 14),
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.reminders),
@@ -546,7 +546,7 @@ class _ArticleTile extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [iconColor.withOpacity(.75), iconColor]),
+                gradient: LinearGradient(colors: [iconColor.withValues(alpha: 0.75), iconColor]),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Icon(icon, color: Colors.white, size: 36),

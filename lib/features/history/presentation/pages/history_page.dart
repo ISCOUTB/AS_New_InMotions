@@ -248,7 +248,7 @@ class _MiniSummaryCard extends StatelessWidget {
           Container(
             width: 42,
             height: 42,
-            decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(width: 10),
@@ -290,7 +290,7 @@ class _HistoryCard extends StatelessWidget {
             Container(
               width: 54,
               height: 54,
-              decoration: BoxDecoration(color: color.withOpacity(.15), borderRadius: BorderRadius.circular(18)),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(18)),
               child: Icon(icon, color: color, size: 30),
             ),
             const SizedBox(width: 14),
@@ -355,7 +355,7 @@ class _EmptyHistory extends StatelessWidget {
             Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(color: AppColors.primary.withOpacity(.10), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.10), shape: BoxShape.circle),
               child: const Icon(Icons.favorite_border_rounded, color: AppColors.primary, size: 36),
             ),
             const SizedBox(height: 16),
@@ -417,7 +417,7 @@ class _HistoryDetailSheet extends StatelessWidget {
               Container(
                 width: 58,
                 height: 58,
-                decoration: BoxDecoration(color: color.withOpacity(.15), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
                 child: Icon(icon, color: color, size: 32),
               ),
               const SizedBox(width: 14),
@@ -434,7 +434,7 @@ class _HistoryDetailSheet extends StatelessWidget {
                 width: 42,
                 height: 42,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: color.withOpacity(.15), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
                 child: Text('${record.level}', style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 17)),
               ),
             ],

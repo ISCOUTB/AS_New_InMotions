@@ -275,7 +275,7 @@ class _IntensitySelector extends StatelessWidget {
                 width: 36,
                 height: 36,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: AppColors.pink.withOpacity(.12), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: AppColors.pink.withValues(alpha: 0.12), shape: BoxShape.circle),
                 child: Text(
                   value.round().toString(),
                   style: const TextStyle(color: AppColors.pink, fontWeight: FontWeight.w900),

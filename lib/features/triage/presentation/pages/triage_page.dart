@@ -242,9 +242,9 @@ class _IntroNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.purple.withOpacity(.10),
+        color: AppColors.purple.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.purple.withOpacity(.18)),
+        border: Border.all(color: AppColors.purple.withValues(alpha: 0.18)),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,9 +346,9 @@ class _QuestionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.red.withOpacity(.08),
+                color: AppColors.red.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.red.withOpacity(.15)),
+                border: Border.all(color: AppColors.red.withValues(alpha: 0.15)),
               ),
               child: const Text(
                 'Esta pregunta ayuda a priorizar recursos de apoyo inmediato si los necesitas.',
@@ -369,7 +369,7 @@ class _QuestionCard extends StatelessWidget {
                   duration: const Duration(milliseconds: 180),
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.purple.withOpacity(.12) : const Color(0xFFF9FAFB),
+                    color: selected ? AppColors.purple.withValues(alpha: 0.12) : const Color(0xFFF9FAFB),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: selected ? AppColors.purple : AppColors.border,
@@ -434,9 +434,9 @@ class _QuestionChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: color.withOpacity(.16)),
+        border: Border.all(color: color.withValues(alpha: 0.16)),
       ),
       child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
     );

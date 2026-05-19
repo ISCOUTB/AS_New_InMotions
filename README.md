@@ -4,7 +4,9 @@ Prototipo móvil Flutter de **AS_New_InMotions**, app de salud mental y bienesta
 
 ## Estado actual
 
-Esta versión corresponde al **Paso 12: recordatorios conectados al backend local**.
+Esta versión corresponde al **Paso 13: backend local modularizado y preparado para base de datos real**.
+
+La app sigue funcionando igual para el usuario, pero el backend quedó mejor organizado internamente para que el siguiente paso sea migrar la persistencia a MongoDB/Cosmos DB sin reescribir toda la lógica.
 
 Incluye lo anterior:
 
@@ -15,20 +17,17 @@ Incluye lo anterior:
 - Registro emocional e historial conectados al backend local.
 - Triaje emocional conectado al backend local.
 - Biblioteca de recursos conectada al backend local con búsqueda, filtros y favoritos por usuario.
-- Headers superiores reducidos para que no sean invasivos.
+- Recordatorios conectados al backend local.
 
 Nuevo en este paso:
 
-- Recordatorios conectados al backend local.
-- Crear recordatorio usando API.
-- Editar recordatorio usando API.
-- Activar/desactivar recordatorio usando API.
-- Eliminar recordatorio usando API.
-- Restaurar recordatorios por defecto usando API.
-- Guardado por usuario autenticado en `backend/data/local-reminders.json`.
-- Endpoint preparado para registrar token de dispositivo en `backend/data/local-devices.json`.
-
-> Nota: todavía no hay notificaciones push reales. Este paso deja lista la lógica backend para recordatorios; Firebase/FCM queda para después.
+- Backend dividido en rutas, controladores, middleware, catálogos, utilidades y almacenamiento.
+- `server.js` reducido a arranque del servidor.
+- Archivo anterior guardado como `backend/src/server.legacy.js`.
+- Configuración centralizada en `backend/src/config/appConfig.js`.
+- Variables preparadas en `backend/.env.example`.
+- Almacenamiento JSON local conservado como modo desarrollo.
+- Estructura lista para crear repositorios de MongoDB/Cosmos DB en el siguiente paso.
 
 ## Usuario de prueba
 
@@ -50,7 +49,7 @@ Debe aparecer algo como:
 
 ```text
 AS_New_InMotions backend local activo en http://localhost:3000/api
-Módulos activos: auth + moods + triage + resources + reminders
+Modo: JSON local modularizado, listo para migrar a MongoDB/Cosmos DB
 Usuario de prueba: estudiante@utb.edu.co / Test@12345
 ```
 
@@ -98,7 +97,9 @@ Si usas un celular físico, reemplaza temporalmente la URL por la IP local de tu
 http://192.168.1.20:3000/api
 ```
 
-## Cómo comprobar el Paso 12 en la app
+## Cómo comprobar el Paso 13 en la app
+
+Como este paso reorganiza el backend internamente, visualmente la app debe verse igual. Lo importante es comprobar que todos los flujos siguen funcionando.
 
 ### 1. Verificar backend activo
 
@@ -108,14 +109,11 @@ Abre en el navegador:
 http://localhost:3000/api/health
 ```
 
-Debe devolver que el backend está activo y mostrar módulos:
+Debe devolver:
 
 ```text
-auth
-moods
-triage
-resources
-reminders
+mode: local-json-modular
+modules: auth, moods, triage, resources, reminders
 ```
 
 ### 2. Probar login
@@ -135,7 +133,44 @@ Test@12345
 
 Debe entrar al Dashboard.
 
-### 3. Probar recordatorios desde backend
+### 3. Probar registro emocional
+
+Abre:
+
+```text
+Inicio → Registrar emoción → Guardar
+```
+
+Luego revisa:
+
+```text
+Inicio
+Historial
+```
+
+El registro debe aparecer igual que antes.
+
+### 4. Probar triaje
+
+Abre:
+
+```text
+Inicio → Triaje
+```
+
+Responde las 23 preguntas. Debe mostrar resultado y guardar el registro en el backend local.
+
+### 5. Probar biblioteca
+
+Abre:
+
+```text
+Menú inferior → Biblioteca
+```
+
+Prueba búsqueda, filtros, detalle y favorito. Todo debe seguir funcionando.
+
+### 6. Probar recordatorios
 
 Abre:
 
@@ -143,57 +178,19 @@ Abre:
 Perfil → Recordatorios
 ```
 
-Debe mostrar los recordatorios por defecto cargados desde el backend.
-
-### 4. Crear recordatorio
-
-En Recordatorios:
-
-```text
-Agregar recordatorio → Motivo → Hora → Días activos → Guardar
-```
-
-Debe aparecer en la lista y crear/actualizar:
-
-```text
-backend/data/local-reminders.json
-```
-
-### 5. Editar o activar/desactivar
-
-En Recordatorios:
-
-```text
-Toca un recordatorio → cambia hora/días/motivo → Guardar
-```
-
-También prueba el switch de activo/inactivo. El cambio debe persistir al cerrar y abrir la app mientras el backend esté corriendo.
-
-### 6. Eliminar y restaurar
-
-En Recordatorios:
-
-```text
-Eliminar un recordatorio
-Restaurar
-```
-
-Debe eliminarse o volver a la configuración por defecto desde el backend.
-
-### 7. Probar separación por usuario
-
-Crea otro usuario con correo `@utb.edu.co`, entra a Recordatorios y modifica uno. Luego vuelve al usuario de prueba. Cada usuario debe conservar sus propios recordatorios.
+Crea, edita, activa/desactiva y elimina un recordatorio. El comportamiento debe ser igual que en el Paso 12.
 
 ## Próximo paso sugerido
 
-**Paso 13: preparación de persistencia real / capa de base de datos**.
+**Paso 14: conexión a MongoDB local o MongoDB Atlas/Cosmos DB en modo opcional**.
 
 Cambios previstos:
 
 ```text
-- Crear una capa DB dentro del backend para no depender directamente de archivos JSON.
-- Separar controladores, rutas y almacenamiento.
-- Preparar variables de entorno para MongoDB o Cosmos DB.
-- Mantener modo JSON local como respaldo de desarrollo.
-- Dejar listo el backend para migrar usuarios, emociones, triaje, biblioteca, favoritos y recordatorios a base de datos real.
+- Crear adaptador de base de datos.
+- Permitir DATABASE_PROVIDER=local-json o DATABASE_PROVIDER=mongodb.
+- Crear conexión a MongoDB.
+- Migrar usuarios, emociones, triaje, derivaciones, favoritos y recordatorios a colecciones.
+- Mantener JSON local como respaldo de desarrollo.
+- Documentar variables de entorno MONGODB_URI y DB_NAME.
 ```

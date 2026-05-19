@@ -24,7 +24,7 @@ class WhiteButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           elevation: 8,
           backgroundColor: Colors.white,
-          shadowColor: Colors.black.withOpacity(.25),
+          shadowColor: Colors.black.withValues(alpha: 0.25),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         child: Row(

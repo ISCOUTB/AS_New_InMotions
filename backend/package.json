@@ -1,20 +1,25 @@
 {
   "name": "as-new-inmotions-backend-local",
   "version": "1.0.0",
-  "description": "Backend local para AS_New_InMotions con autenticación, registros emocionales, triaje y biblioteca sin nube.",
+  "description": "Backend local modular para AS_New_InMotions preparado para migrar a MongoDB/Cosmos DB.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js"
   },
   "keywords": [
-    "inmotions",
-    "utb",
-    "backend-local",
     "auth",
+    "backend-local",
+    "cosmos-ready",
+    "inmotions",
+    "json-local",
+    "modular",
+    "mongodb-ready",
     "moods",
+    "reminders",
+    "resources",
     "triage",
-    "resources"
+    "utb"
   ],
   "author": "AS_New_InMotions",
   "license": "MIT"

@@ -33,11 +33,11 @@ class PrimaryButton extends StatelessWidget {
           color: isOutlined ? Colors.transparent : null,
           gradient: !isOutlined && enabled ? LinearGradient(colors: colors) : null,
           borderRadius: BorderRadius.circular(16),
-          border: isOutlined ? Border.all(color: Colors.white.withOpacity(.40), width: 1.5) : null,
+          border: isOutlined ? Border.all(color: Colors.white.withValues(alpha: 0.40), width: 1.5) : null,
           boxShadow: !isOutlined && enabled
               ? [
                   BoxShadow(
-                    color: colors.first.withOpacity(.28),
+                    color: colors.first.withValues(alpha: 0.28),
                     blurRadius: 18,
                     offset: const Offset(0, 8),
                   ),
@@ -48,7 +48,7 @@ class PrimaryButton extends StatelessWidget {
           onPressed: enabled ? onPressed : null,
           style: ElevatedButton.styleFrom(
             elevation: 0,
-            backgroundColor: isOutlined ? Colors.white.withOpacity(.10) : Colors.transparent,
+            backgroundColor: isOutlined ? Colors.white.withValues(alpha: 0.10) : Colors.transparent,
             disabledBackgroundColor: disabledColor,
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

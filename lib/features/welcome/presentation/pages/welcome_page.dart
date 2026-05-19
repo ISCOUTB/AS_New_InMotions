@@ -37,7 +37,7 @@ class WelcomePage extends StatelessWidget {
                   'Tu bienestar mental en movimiento',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(.82),
+                    color: Colors.white.withValues(alpha: 0.82),
                     fontSize: 17,
                     fontWeight: FontWeight.w500,
                   ),
@@ -73,8 +73,8 @@ class WelcomePage extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pushNamed(context, AppRoutes.register),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white.withOpacity(.35), width: 1.5),
-                      backgroundColor: Colors.white.withOpacity(.10),
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.35), width: 1.5),
+                      backgroundColor: Colors.white.withValues(alpha: 0.10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: const Text(
@@ -87,7 +87,7 @@ class WelcomePage extends StatelessWidget {
                 Text(
                   'Cuida tu salud mental con ayuda profesional',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white.withOpacity(.80), fontSize: 13),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.80), fontSize: 13),
                 ),
                 const SizedBox(height: 24),
               ],
@@ -112,9 +112,9 @@ class _FeatureCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.11),
+        color: Colors.white.withValues(alpha: 0.11),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Row(
         children: [
@@ -122,7 +122,7 @@ class _FeatureCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: Colors.white, size: 26),
@@ -139,7 +139,7 @@ class _FeatureCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   subtitle,
-                  style: TextStyle(color: Colors.white.withOpacity(.78), fontSize: 13),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.78), fontSize: 13),
                 ),
               ],
             ),

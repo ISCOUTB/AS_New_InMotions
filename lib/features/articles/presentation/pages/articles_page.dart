@@ -297,9 +297,9 @@ class _TriageRecommendationNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(.10),
+        color: AppColors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withOpacity(.18)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -535,7 +535,7 @@ class _CompactFilters extends StatelessWidget {
                 'Mostrar solo favoritos',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
             ),
           ],
         );
@@ -560,7 +560,7 @@ class _DropdownFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       isExpanded: true,
       decoration: const InputDecoration(
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -620,7 +620,7 @@ class _ResourceCard extends StatelessWidget {
             Container(
               width: 62,
               height: 62,
-              decoration: BoxDecoration(color: color.withOpacity(.14), borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)),
               child: Icon(icon, color: color, size: 32),
             ),
             const SizedBox(width: 14),
@@ -671,7 +671,7 @@ class _MiniResourceTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: color.withOpacity(.08), borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withOpacity(.12))),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withValues(alpha: 0.12))),
         child: Row(
           children: [
             Icon(ResourceVisuals.iconForFormat(resource.format), color: color),
@@ -707,7 +707,7 @@ class _LevelChip extends StatelessWidget {
     final color = ResourceVisuals.colorForLevel(level);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(30)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(30)),
       child: Text(level, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w900)),
     );
   }

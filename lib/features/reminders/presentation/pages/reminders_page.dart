@@ -230,7 +230,7 @@ class _MainReminderCard extends StatelessWidget {
         final iconBox = Container(
           width: 58,
           height: 58,
-          decoration: BoxDecoration(color: Colors.white.withOpacity(.18), borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(20)),
           child: const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 31),
         );
         final content = Column(
@@ -251,7 +251,7 @@ class _MainReminderCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(26),
             boxShadow: [
               BoxShadow(
-                color: AppColors.purple.withOpacity(.24),
+                color: AppColors.purple.withValues(alpha: 0.24),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -289,7 +289,7 @@ class _ReminderCard extends StatelessWidget {
             Container(
               width: 54,
               height: 54,
-              decoration: BoxDecoration(color: color.withOpacity(.14), borderRadius: BorderRadius.circular(18)),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(18)),
               child: Icon(icon, color: color, size: 29),
             ),
             const SizedBox(width: 14),
@@ -317,7 +317,7 @@ class _ReminderCard extends StatelessWidget {
               children: [
                 Switch(
                   value: reminder.enabled,
-                  activeColor: color,
+                  activeThumbColor: color,
                   onChanged: onChanged,
                 ),
                 IconButton(
@@ -455,7 +455,7 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _type,
+              initialValue: _type,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Motivo del recordatorio'),
               items: AppLists.reminderTypes.map((type) {
@@ -524,7 +524,7 @@ class _ReminderEditorSheetState extends State<_ReminderEditorSheet> {
               onChanged: (value) => setState(() => _enabled = value),
               contentPadding: EdgeInsets.zero,
               title: const Text('Recordatorio activo', style: TextStyle(fontWeight: FontWeight.w800)),
-              activeColor: AppColors.orange,
+              activeThumbColor: AppColors.orange,
             ),
             const SizedBox(height: 10),
             PrimaryButton(

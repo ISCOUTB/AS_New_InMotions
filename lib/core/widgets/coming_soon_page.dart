@@ -34,7 +34,7 @@ class ComingSoonPage extends StatelessWidget {
                       width: 86,
                       height: 86,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(.10),
+                        color: AppColors.primary.withValues(alpha: 0.10),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.construction_rounded, color: AppColors.primary, size: 42),

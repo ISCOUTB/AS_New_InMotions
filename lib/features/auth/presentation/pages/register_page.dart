@@ -78,7 +78,7 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             children: [
               const SizedBox(height: 16),
-              AppLogo(size: 112, padding: 18, backgroundColor: Colors.white.withOpacity(.95)),
+              AppLogo(size: 112, padding: 18, backgroundColor: Colors.white.withValues(alpha: 0.95)),
               const SizedBox(height: 14),
               const Text(
                 'InMotions',
@@ -88,7 +88,7 @@ class _RegisterPageState extends State<RegisterPage> {
               Text(
                 'Crea tu cuenta y cuida tu bienestar',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white.withOpacity(.82), fontSize: 15),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.82), fontSize: 15),
               ),
               const SizedBox(height: 24),
               Container(
@@ -99,7 +99,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(.18),
+                      color: Colors.black.withValues(alpha: 0.18),
                       blurRadius: 28,
                       offset: const Offset(0, 14),
                     ),

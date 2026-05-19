@@ -77,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
                 Text(
                   'Tu bienestar mental en movimiento',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white.withOpacity(.80), fontSize: 15),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.80), fontSize: 15),
                 ),
                 const SizedBox(height: 28),
                 Container(
@@ -88,7 +88,7 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(.18),
+                        color: Colors.black.withValues(alpha: 0.18),
                         blurRadius: 28,
                         offset: const Offset(0, 14),
                       ),

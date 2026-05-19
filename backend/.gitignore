@@ -4,5 +4,6 @@ data/local-moods.json
 data/local-triage-results.json
 data/local-referrals.json
 .env
-
 data/local-resource-favorites.json
+data/local-reminders.json
+data/local-devices.json

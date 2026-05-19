@@ -126,7 +126,7 @@ class _TriageResultPageState extends State<TriageResultPage> {
                   PrimaryButton(
                     text: 'Volver al inicio',
                     icon: Icons.home_rounded,
-                    gradientColors: [color, color.withOpacity(.75)],
+                    gradientColors: [color, color.withValues(alpha: 0.75)],
                     onPressed: () => Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false),
                   ),
                   const SizedBox(height: 10),
@@ -157,7 +157,7 @@ class _Header extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 10, 18, 22),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withOpacity(.72)]),
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.72)]),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Column(
@@ -182,7 +182,7 @@ class _Header extends StatelessWidget {
           Container(
             width: 76,
             height: 76,
-            decoration: BoxDecoration(color: Colors.white.withOpacity(.20), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.20), shape: BoxShape.circle),
             child: Icon(icon, color: Colors.white, size: 42),
           ),
           const SizedBox(height: 12),
@@ -193,7 +193,7 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Puntaje: ${result.score} · ${DateFormatter.shortDate(result.createdAt)}',
-            style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 14),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 14),
           ),
         ],
       ),
@@ -286,9 +286,9 @@ class _SupportCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: showUrgent ? AppColors.red.withOpacity(.10) : AppColors.primary.withOpacity(.10),
+        color: showUrgent ? AppColors.red.withValues(alpha: 0.10) : AppColors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: showUrgent ? AppColors.red.withOpacity(.20) : AppColors.primary.withOpacity(.18)),
+        border: Border.all(color: showUrgent ? AppColors.red.withValues(alpha: 0.20) : AppColors.primary.withValues(alpha: 0.18)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,7 +350,7 @@ class _AnswersSummaryCard extends StatelessWidget {
                     height: 28,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColors.purple.withOpacity(.12),
+                      color: AppColors.purple.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: Text('$index', style: const TextStyle(color: AppColors.purple, fontWeight: FontWeight.w900)),
