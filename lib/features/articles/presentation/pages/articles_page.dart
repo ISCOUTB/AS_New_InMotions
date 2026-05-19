@@ -113,17 +113,18 @@ class _ArticlesPageState extends State<ArticlesPage> {
           CustomScrollView(
             slivers: [
               SliverToBoxAdapter(child: _Header(onBack: () => Navigator.pop(context))),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
               if (_mustShowRestrictedGate)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
+                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
                     child: _RestrictedAccessCard(onContinue: _acknowledgeRestrictedAccess),
                   ),
                 )
               else ...[
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
+                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
                     child: _TriageRecommendationNotice(latestResult: _latestResult),
                   ),
                 ),
@@ -240,7 +241,7 @@ class _Header extends StatelessWidget {
         top: MediaQuery.of(context).padding.top + 12,
         left: 8,
         right: 18,
-        bottom: 32,
+        bottom: 38,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -262,7 +263,7 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 6),
+                SizedBox(height: 12),
                 Text(
                   'Biblioteca de Recursos',
                   style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900),
@@ -489,30 +490,67 @@ class _CompactFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallWidth = constraints.maxWidth < 390;
+
+        final formatDropdown = _DropdownFilter(
+          label: 'Formato',
+          value: selectedFormat,
+          values: formats,
+          onChanged: onFormatChanged,
+        );
+
+        final levelDropdown = _DropdownFilter(
+          label: 'Nivel',
+          value: selectedLevel,
+          values: levels,
+          onChanged: onLevelChanged,
+        );
+
+        return Column(
           children: [
-            Expanded(child: _DropdownFilter(label: 'Formato', value: selectedFormat, values: formats, onChanged: onFormatChanged)),
-            const SizedBox(width: 10),
-            Expanded(child: _DropdownFilter(label: 'Nivel', value: selectedLevel, values: levels, onChanged: onLevelChanged)),
+            if (isSmallWidth)
+              Column(
+                children: [
+                  formatDropdown,
+                  const SizedBox(height: 10),
+                  levelDropdown,
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(child: formatDropdown),
+                  const SizedBox(width: 10),
+                  Expanded(child: levelDropdown),
+                ],
+              ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              value: favoritesOnly,
+              onChanged: onFavoritesChanged,
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Mostrar solo favoritos',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              activeColor: AppColors.primary,
+            ),
           ],
-        ),
-        const SizedBox(height: 8),
-        SwitchListTile(
-          value: favoritesOnly,
-          onChanged: onFavoritesChanged,
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Mostrar solo favoritos', style: TextStyle(fontWeight: FontWeight.w800)),
-          activeColor: AppColors.primary,
-        ),
-      ],
+        );
+      },
     );
   }
 }
 
 class _DropdownFilter extends StatelessWidget {
-  const _DropdownFilter({required this.label, required this.value, required this.values, required this.onChanged});
+  const _DropdownFilter({
+    required this.label,
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String label;
   final String value;
@@ -523,8 +561,34 @@ class _DropdownFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
       value: value,
-      decoration: InputDecoration(labelText: label, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-      items: values.map((item) => DropdownMenuItem(value: item, child: Text(item, overflow: TextOverflow.ellipsis))).toList(),
+      isExpanded: true,
+      decoration: const InputDecoration(
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ).copyWith(labelText: label),
+      selectedItemBuilder: (context) {
+        return values.map((item) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              item,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+            ),
+          );
+        }).toList();
+      },
+      items: values.map((item) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Text(
+            item,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+          ),
+        );
+      }).toList(),
       onChanged: (value) {
         if (value != null) onChanged(value);
       },
