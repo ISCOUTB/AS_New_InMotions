@@ -22,5 +22,9 @@
     "utb"
   ],
   "author": "AS_New_InMotions",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mysql2": "^3.22.3"
+  }
 }
