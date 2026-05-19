@@ -31,6 +31,11 @@ class DateFormatter {
     return '${local.day} ${_months[local.month - 1]} ${local.year}';
   }
 
+  static String shortDate(DateTime date) {
+    final local = date.toLocal();
+    return "${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}";
+  }
+
   static String readableDateTime(DateTime date) {
     final local = date.toLocal();
     final hour = local.hour.toString().padLeft(2, '0');

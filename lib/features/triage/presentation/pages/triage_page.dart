@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/models/triage_question_model.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/primary_button.dart';
-import '../../../../data/mock/mock_data.dart';
+import '../../../../data/repositories/triage_repository.dart';
 
 class TriagePage extends StatefulWidget {
   const TriagePage({super.key});
@@ -14,22 +15,69 @@ class TriagePage extends StatefulWidget {
 }
 
 class _TriagePageState extends State<TriagePage> {
+  final TriageRepository _repository = TriageRepository();
+  final Map<String, TriageOptionModel> _selectedOptions = {};
+
+  List<TriageQuestionModel> _questions = [];
   int _currentIndex = 0;
-  final Map<int, int> _answers = {};
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+  String? _errorMessage;
 
-  bool get _isLast => _currentIndex == MoreMockData.triageQuestions.length - 1;
-  bool get _hasAnswer => _answers.containsKey(_currentIndex);
+  bool get _isLast => _questions.isNotEmpty && _currentIndex == _questions.length - 1;
 
-  void _next() {
-    if (!_hasAnswer) return;
+  bool get _hasAnswer {
+    if (_questions.isEmpty) return false;
+    return _selectedOptions.containsKey(_questions[_currentIndex].id);
+  }
 
-    if (_isLast) {
-      final int score = _answers.values.fold(0, (sum, value) => sum + value);
-      Navigator.pushNamed(context, AppRoutes.triageResult, arguments: {'score': score});
+  @override
+  void initState() {
+    super.initState();
+    _loadQuestions();
+  }
+
+  Future<void> _loadQuestions() async {
+    try {
+      final questions = await _repository.getActiveQuestions();
+      if (!mounted) return;
+      setState(() {
+        _questions = questions;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _next() async {
+    if (!_hasAnswer || _isSubmitting) return;
+
+    if (!_isLast) {
+      setState(() => _currentIndex++);
       return;
     }
 
-    setState(() => _currentIndex++);
+    setState(() => _isSubmitting = true);
+
+    try {
+      final result = await _repository.submitAnswers(_selectedOptions);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, AppRoutes.triageResult, arguments: result);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = error.toString();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
   }
 
   void _previous() {
@@ -42,16 +90,47 @@ class _TriagePageState extends State<TriagePage> {
 
   @override
   Widget build(BuildContext context) {
-    final question = MoreMockData.triageQuestions[_currentIndex];
-    final progress = (_currentIndex + 1) / MoreMockData.triageQuestions.length;
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMessage != null && _questions.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline_rounded, color: AppColors.red, size: 48),
+                const SizedBox(height: 12),
+                Text(_errorMessage!, textAlign: TextAlign.center),
+                const SizedBox(height: 18),
+                PrimaryButton(
+                  text: 'Volver',
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icons.arrow_back_rounded,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final question = _questions[_currentIndex];
+    final progress = (_currentIndex + 1) / _questions.length;
+    final selectedOption = _selectedOptions[question.id];
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _Header(onBack: _previous)),
-          SliverToBoxAdapter(
+          const SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
+              padding: EdgeInsets.fromLTRB(18, 22, 18, 0),
               child: _IntroNotice(),
             ),
           ),
@@ -60,7 +139,7 @@ class _TriagePageState extends State<TriagePage> {
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
               child: _ProgressCard(
                 current: _currentIndex + 1,
-                total: MoreMockData.triageQuestions.length,
+                total: _questions.length,
                 progress: progress,
               ),
             ),
@@ -70,8 +149,8 @@ class _TriagePageState extends State<TriagePage> {
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
               child: _QuestionCard(
                 question: question,
-                selectedScore: _answers[_currentIndex],
-                onSelected: (score) => setState(() => _answers[_currentIndex] = score),
+                selectedOptionId: selectedOption?.id,
+                onSelected: (option) => setState(() => _selectedOptions[question.id] = option),
               ),
             ),
           ),
@@ -81,17 +160,20 @@ class _TriagePageState extends State<TriagePage> {
               child: Column(
                 children: [
                   PrimaryButton(
-                    text: _isLast ? 'Ver Resultado' : 'Siguiente',
+                    text: _isSubmitting ? 'Calculando...' : (_isLast ? 'Ver resultado' : 'Siguiente'),
                     icon: _isLast ? Icons.analytics_rounded : Icons.arrow_forward_rounded,
-                    enabled: _hasAnswer,
+                    enabled: _hasAnswer && !_isSubmitting,
                     gradientColors: const [AppColors.purple, AppColors.primary],
                     onPressed: _next,
                   ),
                   const SizedBox(height: 10),
                   if (_currentIndex > 0)
                     TextButton(
-                      onPressed: _previous,
-                      child: const Text('Volver a la pregunta anterior', style: TextStyle(fontWeight: FontWeight.w800)),
+                      onPressed: _isSubmitting ? null : _previous,
+                      child: const Text(
+                        'Volver a la pregunta anterior',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
                     ),
                 ],
               ),
@@ -152,6 +234,8 @@ class _Header extends StatelessWidget {
 }
 
 class _IntroNotice extends StatelessWidget {
+  const _IntroNotice();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -168,7 +252,7 @@ class _IntroNotice extends StatelessWidget {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Este test no reemplaza la atención profesional. Sirve como guía visual para identificar tu nivel de bienestar emocional.',
+              'Este test no reemplaza la atención profesional. En esta fase el resultado se calcula y guarda localmente; luego se conectará al backend y a Psicología UTB.',
               style: TextStyle(color: AppColors.textDark, fontSize: 13.5, height: 1.35),
             ),
           ),
@@ -199,7 +283,10 @@ class _ProgressCard extends StatelessWidget {
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
                 ),
               ),
-              Text('${(progress * 100).round()}%', style: const TextStyle(color: AppColors.purple, fontWeight: FontWeight.w900)),
+              Text(
+                '${(progress * 100).round()}%',
+                style: const TextStyle(color: AppColors.purple, fontWeight: FontWeight.w900),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -219,11 +306,15 @@ class _ProgressCard extends StatelessWidget {
 }
 
 class _QuestionCard extends StatelessWidget {
-  const _QuestionCard({required this.question, required this.selectedScore, required this.onSelected});
+  const _QuestionCard({
+    required this.question,
+    required this.selectedOptionId,
+    required this.onSelected,
+  });
 
-  final TriageQuestion question;
-  final int? selectedScore;
-  final ValueChanged<int> onSelected;
+  final TriageQuestionModel question;
+  final String? selectedOptionId;
+  final ValueChanged<TriageOptionModel> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -233,23 +324,32 @@ class _QuestionCard extends StatelessWidget {
         children: [
           Text(
             question.question,
-            style: const TextStyle(color: AppColors.textDark, fontSize: 20, fontWeight: FontWeight.w900, height: 1.25),
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              height: 1.25,
+            ),
           ),
           const SizedBox(height: 18),
           ...question.options.map((option) {
-            final bool selected = selectedScore == option.score;
+            final bool selected = selectedOptionId == option.id;
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: InkWell(
                 borderRadius: BorderRadius.circular(18),
-                onTap: () => onSelected(option.score),
+                onTap: () => onSelected(option),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
                     color: selected ? AppColors.purple.withOpacity(.12) : const Color(0xFFF9FAFB),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: selected ? AppColors.purple : AppColors.border, width: selected ? 1.6 : 1),
+                    border: Border.all(
+                      color: selected ? AppColors.purple : AppColors.border,
+                      width: selected ? 1.6 : 1,
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -259,7 +359,10 @@ class _QuestionCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: selected ? AppColors.purple : Colors.white,
-                          border: Border.all(color: selected ? AppColors.purple : AppColors.border, width: 1.5),
+                          border: Border.all(
+                            color: selected ? AppColors.purple : AppColors.border,
+                            width: 1.5,
+                          ),
                         ),
                         child: selected ? const Icon(Icons.check_rounded, color: Colors.white, size: 16) : null,
                       ),

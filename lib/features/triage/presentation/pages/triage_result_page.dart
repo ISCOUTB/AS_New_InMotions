@@ -1,25 +1,98 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_config.dart';
+import '../../../../core/models/triage_result_model.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/triage_visuals.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../data/repositories/triage_repository.dart';
 
-class TriageResultPage extends StatelessWidget {
+class TriageResultPage extends StatefulWidget {
   const TriageResultPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    int score = 8;
-    if (args is Map && args['score'] is int) score = args['score'] as int;
+  State<TriageResultPage> createState() => _TriageResultPageState();
+}
 
-    final result = _ResultInfo.fromScore(score);
+class _TriageResultPageState extends State<TriageResultPage> {
+  final TriageRepository _repository = TriageRepository();
+  TriageResultModel? _fallbackResult;
+  bool _isLoadingFallback = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final argResult = _argumentResult;
+    if (argResult == null && !_isLoadingFallback && _fallbackResult == null) {
+      _loadLatestResult();
+    }
+  }
+
+  TriageResultModel? get _argumentResult {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is TriageResultModel) return args;
+    if (args is Map<String, dynamic>) return TriageResultModel.fromMap(args);
+    return null;
+  }
+
+  Future<void> _loadLatestResult() async {
+    setState(() => _isLoadingFallback = true);
+    final result = await _repository.getMyLatestResult();
+    if (!mounted) return;
+    setState(() {
+      _fallbackResult = result;
+      _isLoadingFallback = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final result = _argumentResult ?? _fallbackResult;
+
+    if (_isLoadingFallback) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (result == null) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.analytics_outlined, color: AppColors.purple, size: 54),
+                const SizedBox(height: 14),
+                const Text(
+                  'Aún no hay un resultado de triaje guardado.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 18),
+                PrimaryButton(
+                  text: 'Realizar triaje',
+                  icon: Icons.psychology_rounded,
+                  gradientColors: const [AppColors.purple, AppColors.primary],
+                  onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.triage),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final color = TriageVisuals.colorForRiskLevel(result.riskLevel);
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(child: _Header(result: result, score: score)),
+          SliverToBoxAdapter(child: _Header(result: result)),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
@@ -35,7 +108,13 @@ class TriageResultPage extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-              child: _SupportCard(showUrgent: result.level == 'Alto'),
+              child: _SupportCard(result: result),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+              child: _AnswersSummaryCard(result: result),
             ),
           ),
           SliverToBoxAdapter(
@@ -46,12 +125,12 @@ class TriageResultPage extends StatelessWidget {
                   PrimaryButton(
                     text: 'Volver al inicio',
                     icon: Icons.home_rounded,
-                    gradientColors: [result.color, result.color.withOpacity(.75)],
+                    gradientColors: [color, color.withOpacity(.75)],
                     onPressed: () => Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false),
                   ),
                   const SizedBox(height: 10),
                   TextButton(
-                    onPressed: () => Navigator.pushNamed(context, AppRoutes.triage),
+                    onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.triage),
                     child: const Text('Repetir triaje', style: TextStyle(fontWeight: FontWeight.w800)),
                   ),
                 ],
@@ -64,79 +143,20 @@ class TriageResultPage extends StatelessWidget {
   }
 }
 
-class _ResultInfo {
-  const _ResultInfo({
-    required this.level,
-    required this.title,
-    required this.message,
-    required this.color,
-    required this.icon,
-    required this.recommendations,
-  });
-
-  final String level;
-  final String title;
-  final String message;
-  final Color color;
-  final IconData icon;
-  final List<String> recommendations;
-
-  factory _ResultInfo.fromScore(int score) {
-    if (score >= 11) {
-      return const _ResultInfo(
-        level: 'Alto',
-        title: 'Se recomienda apoyo profesional',
-        message: 'Tus respuestas indican un nivel alto de malestar emocional. Es importante que no lo manejes en soledad y busques acompañamiento.',
-        color: AppColors.red,
-        icon: Icons.priority_high_rounded,
-        recommendations: [
-          'Contactar al área de Psicología UTB.',
-          'Hablar con una persona de confianza hoy.',
-          'Evitar tomar decisiones importantes mientras te sientes sobrecargado.',
-        ],
-      );
-    }
-    if (score >= 6) {
-      return const _ResultInfo(
-        level: 'Medio',
-        title: 'Necesitas fortalecer tu autocuidado',
-        message: 'Tus respuestas muestran señales moderadas de tensión emocional. Puedes beneficiarte de hábitos de regulación y seguimiento.',
-        color: AppColors.orange,
-        icon: Icons.warning_amber_rounded,
-        recommendations: [
-          'Registrar tus emociones durante la semana.',
-          'Practicar respiración o pausas activas.',
-          'Buscar orientación si el malestar se mantiene.',
-        ],
-      );
-    }
-    return const _ResultInfo(
-      level: 'Bajo',
-      title: 'Tu resultado está en rango bajo',
-      message: 'Tus respuestas no muestran señales fuertes de riesgo en este momento. Mantén hábitos de bienestar y seguimiento emocional.',
-      color: AppColors.green,
-      icon: Icons.check_circle_rounded,
-      recommendations: [
-        'Continuar con tu registro emocional diario.',
-        'Mantener descanso, actividad física y redes de apoyo.',
-        'Consultar recursos educativos de bienestar.',
-      ],
-    );
-  }
-}
-
 class _Header extends StatelessWidget {
-  const _Header({required this.result, required this.score});
+  const _Header({required this.result});
 
-  final _ResultInfo result;
-  final int score;
+  final TriageResultModel result;
 
   @override
   Widget build(BuildContext context) {
+    final color = TriageVisuals.colorForRiskLevel(result.riskLevel);
+    final icon = TriageVisuals.iconForRiskLevel(result.riskLevel);
+
     return Container(
       padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 24, 18, 34),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [result.color, result.color.withOpacity(.72)]),
+        gradient: LinearGradient(colors: [color, color.withOpacity(.72)]),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
       child: Column(
@@ -144,8 +164,8 @@ class _Header extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: () => Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (_) => false),
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
               ),
               const Expanded(
                 child: Text(
@@ -162,15 +182,18 @@ class _Header extends StatelessWidget {
             width: 96,
             height: 96,
             decoration: BoxDecoration(color: Colors.white.withOpacity(.20), shape: BoxShape.circle),
-            child: Icon(result.icon, color: Colors.white, size: 54),
+            child: Icon(icon, color: Colors.white, size: 54),
           ),
           const SizedBox(height: 18),
           Text(
-            'Riesgo ${result.level}',
+            'Riesgo ${result.riskLevel.label}',
             style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
-          Text('Puntaje visual: $score', style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 14)),
+          Text(
+            'Puntaje: ${result.score} · ${DateFormatter.shortDate(result.createdAt)}',
+            style: TextStyle(color: Colors.white.withOpacity(.85), fontSize: 14),
+          ),
         ],
       ),
     );
@@ -180,7 +203,7 @@ class _Header extends StatelessWidget {
 class _MessageCard extends StatelessWidget {
   const _MessageCard({required this.result});
 
-  final _ResultInfo result;
+  final TriageResultModel result;
 
   @override
   Widget build(BuildContext context) {
@@ -188,9 +211,28 @@ class _MessageCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(result.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+          Text(
+            result.riskLevel.title,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textDark),
+          ),
           const SizedBox(height: 10),
-          Text(result.message, style: const TextStyle(color: AppColors.textDark, height: 1.45, fontSize: 14.5)),
+          Text(
+            result.riskLevel.message,
+            style: const TextStyle(color: AppColors.textDark, height: 1.45, fontSize: 14.5),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Text(
+              'Nota: este resultado es orientativo y no reemplaza una valoración profesional.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.35),
+            ),
+          ),
         ],
       ),
     );
@@ -200,10 +242,12 @@ class _MessageCard extends StatelessWidget {
 class _RecommendationsCard extends StatelessWidget {
   const _RecommendationsCard({required this.result});
 
-  final _ResultInfo result;
+  final TriageResultModel result;
 
   @override
   Widget build(BuildContext context) {
+    final color = TriageVisuals.colorForRiskLevel(result.riskLevel);
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,7 +260,7 @@ class _RecommendationsCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle_rounded, color: result.color, size: 21),
+                  Icon(Icons.check_circle_rounded, color: color, size: 21),
                   const SizedBox(width: 10),
                   Expanded(child: Text(text, style: const TextStyle(fontSize: 14, height: 1.35))),
                 ],
@@ -230,12 +274,14 @@ class _RecommendationsCard extends StatelessWidget {
 }
 
 class _SupportCard extends StatelessWidget {
-  const _SupportCard({required this.showUrgent});
+  const _SupportCard({required this.result});
 
-  final bool showUrgent;
+  final TriageResultModel result;
 
   @override
   Widget build(BuildContext context) {
+    final showUrgent = result.requiresReferral;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -253,19 +299,74 @@ class _SupportCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  showUrgent ? 'Contacto con Psicología UTB' : 'Acompañamiento disponible',
+                  showUrgent ? 'Derivación a ${AppConfig.psychologyDepartmentName}' : 'Acompañamiento disponible',
                   style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                 ),
                 const SizedBox(height: 5),
                 Text(
                   showUrgent
-                      ? 'En la versión con backend, este flujo enviará una derivación automática o mostrará el canal institucional de apoyo.'
+                      ? 'En esta fase quedó registrada localmente como ${result.referralStatus ?? 'pendiente'}. En el backend se enviará al correo o endpoint oficial: ${AppConfig.psychologyEmail}.'
                       : 'Puedes consultar recursos y solicitar apoyo si sientes que lo necesitas.',
                   style: const TextStyle(fontSize: 13.5, height: 1.35, color: AppColors.textDark),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnswersSummaryCard extends StatelessWidget {
+  const _AnswersSummaryCard({required this.result});
+
+  final TriageResultModel result;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Resumen de respuestas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          ...result.answers.asMap().entries.map((entry) {
+            final index = entry.key + 1;
+            final answer = entry.value;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.purple.withOpacity(.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text('$index', style: const TextStyle(color: AppColors.purple, fontWeight: FontWeight.w900)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      answer.optionText,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('+${answer.score}', style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
