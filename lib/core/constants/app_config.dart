@@ -11,10 +11,14 @@ class AppConfig {
 
   // Dato temporal para pruebas locales. Reemplazar por correo oficial o endpoint real.
   static const String psychologyDepartmentName = 'Psicología UTB';
-  static const String psychologyEmail = 'psicologia@utb.edu.co';
+  static const String psychologyEmail = 'bienestar@utb.edu.co';
 
-  // Umbral definido inicialmente según el entregable del proyecto.
-  static const int highRiskThreshold = 15;
+  // Umbrales oficiales del anexo de triaje emocional.
+  static const int greenMaxScore = 45;
+  static const int yellowMaxScore = 70;
+  static const int orangeMaxScore = 95;
+  static const int redMaxScore = 115;
+  static const int criticalActivationScore = 4;
 
   // Usuario de prueba local para comenzar sin backend.
   static const String demoEmail = 'estudiante@utb.edu.co';

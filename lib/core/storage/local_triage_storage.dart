@@ -34,6 +34,14 @@ class LocalTriageStorage {
     }
   }
 
+
+  Future<TriageResultModel?> getLatestResult() async {
+    final results = await getAllResults();
+    if (results.isEmpty) return null;
+    results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return results.first;
+  }
+
   Future<List<TriageResultModel>> getResultsByUser(String userId) async {
     final results = await getAllResults();
     return results.where((result) => result.userId == userId).toList();

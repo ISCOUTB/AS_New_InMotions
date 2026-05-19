@@ -221,7 +221,7 @@ class _Header extends StatelessWidget {
                 ),
                 SizedBox(height: 7),
                 Text(
-                  'Responde con honestidad para recibir una orientación inicial.',
+                  '23 ítems · Últimas dos semanas · Escala de 1 a 5.',
                   style: TextStyle(color: Color(0xFFEDE9FE), fontSize: 14, height: 1.35),
                 ),
               ],
@@ -252,7 +252,7 @@ class _IntroNotice extends StatelessWidget {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Este test no reemplaza la atención profesional. En esta fase el resultado se calcula y guarda localmente; luego se conectará al backend y a Psicología UTB.',
+              'Este test es una herramienta de orientación y no reemplaza una evaluación psicológica o psiquiátrica profesional. Los resultados se calculan localmente durante esta fase.',
               style: TextStyle(color: AppColors.textDark, fontSize: 13.5, height: 1.35),
             ),
           ),
@@ -322,6 +322,15 @@ class _QuestionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _QuestionChip(text: question.area, color: AppColors.purple),
+              if (question.isCritical) const _QuestionChip(text: 'Ítem crítico', color: AppColors.red),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
             question.question,
             style: const TextStyle(
@@ -331,6 +340,21 @@ class _QuestionCard extends StatelessWidget {
               height: 1.25,
             ),
           ),
+          if (question.isCritical) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.red.withOpacity(.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.red.withOpacity(.15)),
+              ),
+              child: const Text(
+                'Esta pregunta ayuda a priorizar recursos de apoyo inmediato si los necesitas.',
+                style: TextStyle(color: AppColors.textDark, fontSize: 13.2, height: 1.35),
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           ...question.options.map((option) {
             final bool selected = selectedOptionId == option.id;
@@ -368,9 +392,21 @@ class _QuestionCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          option.text,
-                          style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, height: 1.25),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              option.text,
+                              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, height: 1.25),
+                            ),
+                            if (option.interpretation != null) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                option.interpretation!,
+                                style: const TextStyle(fontSize: 12.2, color: AppColors.textMuted, height: 1.25),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],
@@ -381,6 +417,27 @@ class _QuestionCard extends StatelessWidget {
           }),
         ],
       ),
+    );
+  }
+}
+
+
+class _QuestionChip extends StatelessWidget {
+  const _QuestionChip({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.10),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color.withOpacity(.16)),
+      ),
+      child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }
 }
