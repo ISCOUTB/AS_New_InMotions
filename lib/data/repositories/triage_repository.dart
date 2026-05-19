@@ -2,6 +2,8 @@ import '../../core/constants/app_config.dart';
 import '../../core/models/triage_answer_model.dart';
 import '../../core/models/triage_question_model.dart';
 import '../../core/models/triage_result_model.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/services/triage_api_service.dart';
 import '../../core/storage/local_session_storage.dart';
 import '../../core/storage/local_triage_storage.dart';
 
@@ -18,25 +20,130 @@ class TriageRepository {
   TriageRepository({
     LocalSessionStorage? sessionStorage,
     LocalTriageStorage? triageStorage,
+    TriageApiService? triageApiService,
   })  : _sessionStorage = sessionStorage ?? LocalSessionStorage(),
-        _triageStorage = triageStorage ?? LocalTriageStorage();
+        _triageStorage = triageStorage ?? LocalTriageStorage(),
+        _triageApiService = triageApiService ?? TriageApiService();
 
   final LocalSessionStorage _sessionStorage;
   final LocalTriageStorage _triageStorage;
+  final TriageApiService _triageApiService;
 
   Future<List<TriageQuestionModel>> getActiveQuestions() async {
+    if (AppConfig.useRemoteBackend) return _getRemoteQuestions();
+    return _getLocalQuestions();
+  }
+
+  Future<TriageResultModel> submitAnswers(Map<String, TriageOptionModel> selectedOptions) async {
+    if (AppConfig.useRemoteBackend) return _submitRemoteAnswers(selectedOptions);
+    return _submitLocalAnswers(selectedOptions);
+  }
+
+  Future<TriageResultModel?> getMyLatestResult() async {
+    if (AppConfig.useRemoteBackend) {
+      try {
+        final results = await getMyResults();
+        if (results.isEmpty) return null;
+        return results.first;
+      } catch (_) {
+        return _getLocalLatestResult();
+      }
+    }
+
+    return _getLocalLatestResult();
+  }
+
+  Future<List<TriageResultModel>> getMyResults() async {
+    if (AppConfig.useRemoteBackend) {
+      try {
+        final response = await _triageApiService.getResults();
+        final data = response['data'] as Map<String, dynamic>? ?? <String, dynamic>{};
+        final results = (data['results'] as List<dynamic>? ?? [])
+            .map((item) => TriageResultModel.fromMap(item as Map<String, dynamic>))
+            .toList();
+        results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return results;
+      } on ApiException catch (error) {
+        throw TriageException(error.message);
+      }
+    }
+
+    final user = await _sessionStorage.getCurrentUser();
+    if (user == null) return [];
+    final results = await _triageStorage.getResultsByUser(user.id);
+    results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return results;
+  }
+
+  Future<List<TriageQuestionModel>> _getRemoteQuestions() async {
+    try {
+      final response = await _triageApiService.getQuestions();
+      final data = response['data'] as Map<String, dynamic>? ?? <String, dynamic>{};
+      final questions = (data['questions'] as List<dynamic>? ?? [])
+          .map((item) => TriageQuestionModel.fromMap(item as Map<String, dynamic>))
+          .where((question) => question.isActive)
+          .toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
+
+      if (questions.isEmpty) {
+        throw TriageException('No hay preguntas activas de triaje en el backend');
+      }
+
+      return questions;
+    } on ApiException catch (error) {
+      throw TriageException(error.message);
+    }
+  }
+
+  Future<List<TriageQuestionModel>> _getLocalQuestions() async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     return _officialQuestions.where((question) => question.isActive).toList()
       ..sort((a, b) => a.order.compareTo(b.order));
   }
 
-  Future<TriageResultModel> submitAnswers(Map<String, TriageOptionModel> selectedOptions) async {
+  Future<TriageResultModel> _submitRemoteAnswers(Map<String, TriageOptionModel> selectedOptions) async {
+    final questions = await getActiveQuestions();
+    final missingQuestions = questions.where((question) => !selectedOptions.containsKey(question.id)).toList();
+
+    if (missingQuestions.isNotEmpty) {
+      throw TriageException('Responde todas las preguntas antes de ver el resultado');
+    }
+
+    final answersPayload = questions.map((question) {
+      final option = selectedOptions[question.id]!;
+      return {
+        'questionId': question.id,
+        'optionId': option.id,
+      };
+    }).toList();
+
+    try {
+      final response = await _triageApiService.submitAnswers(answersPayload);
+      final data = response['data'] as Map<String, dynamic>? ?? <String, dynamic>{};
+      final resultMap = data['result'] as Map<String, dynamic>?;
+
+      if (resultMap == null) {
+        throw TriageException('El backend no devolvió un resultado de triaje válido');
+      }
+
+      final result = TriageResultModel.fromMap(resultMap);
+
+      // Se guarda una copia local para que la Biblioteca pueda recomendar recursos
+      // aun antes de conectar toda la app a la base de datos.
+      await _triageStorage.saveResult(result);
+      return result;
+    } on ApiException catch (error) {
+      throw TriageException(error.message);
+    }
+  }
+
+  Future<TriageResultModel> _submitLocalAnswers(Map<String, TriageOptionModel> selectedOptions) async {
     final user = await _sessionStorage.getCurrentUser();
     if (user == null) {
       throw TriageException('Debes iniciar sesión para realizar el triaje');
     }
 
-    final questions = await getActiveQuestions();
+    final questions = await _getLocalQuestions();
     final missingQuestions = questions.where((question) => !selectedOptions.containsKey(question.id)).toList();
 
     if (missingQuestions.isNotEmpty) {
@@ -77,7 +184,7 @@ class TriageRepository {
     return result;
   }
 
-  Future<TriageResultModel?> getMyLatestResult() async {
+  Future<TriageResultModel?> _getLocalLatestResult() async {
     final user = await _sessionStorage.getCurrentUser();
     if (user == null) return null;
 
@@ -85,14 +192,6 @@ class TriageRepository {
     if (results.isEmpty) return null;
     results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return results.first;
-  }
-
-  Future<List<TriageResultModel>> getMyResults() async {
-    final user = await _sessionStorage.getCurrentUser();
-    if (user == null) return [];
-    final results = await _triageStorage.getResultsByUser(user.id);
-    results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return results;
   }
 
   int calculateScore(List<TriageAnswerModel> answers) {

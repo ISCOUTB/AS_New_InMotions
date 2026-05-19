@@ -4,7 +4,7 @@ Prototipo móvil Flutter de **AS_New_InMotions**, app de salud mental y bienesta
 
 ## Estado actual
 
-Esta versión corresponde al **Paso 9: backend local para registro emocional e historial**.
+Esta versión corresponde al **Paso 10: triaje emocional conectado al backend local**.
 
 Incluye lo anterior:
 
@@ -12,22 +12,20 @@ Incluye lo anterior:
 - Registro e inicio de sesión con correo institucional `@utb.edu.co`.
 - Sesión local con token Bearer guardado en `SharedPreferences`.
 - Perfil con imagen local.
-- Triaje emocional local con 23 ítems oficiales.
-- Clasificación por niveles: Verde, Amarillo, Naranja, Rojo y Crítico.
+- Registro emocional e historial conectados al backend local.
 - Biblioteca de recursos local con filtros responsive y favoritos.
 - Recordatorios locales funcionales.
 - Headers superiores reducidos para que no sean invasivos.
 
 Nuevo en este paso:
 
-- Se agregaron endpoints `/moods` al backend local.
-- El backend guarda registros emocionales por usuario autenticado.
-- Flutter ahora guarda el registro emocional mediante API.
-- El Dashboard consulta el estado emocional de hoy desde el backend.
-- El Historial consulta registros desde el backend.
-- La eliminación de registros emocionales también se hace desde el backend.
-- Las estadísticas semanales se calculan desde el backend local.
-- La información se guarda temporalmente en `backend/data/local-moods.json`.
+- El backend local ahora expone endpoints de triaje.
+- Las 23 preguntas oficiales del triaje se cargan desde el backend.
+- Flutter ya no calcula el resultado oficial del triaje por su cuenta cuando `useRemoteBackend = true`.
+- El backend valida respuestas, calcula puntaje, define nivel y activa protocolo crítico.
+- El backend guarda resultados por usuario autenticado en `backend/data/local-triage-results.json`.
+- Si el nivel requiere derivación, el backend crea una derivación local en `backend/data/local-referrals.json`.
+- La Biblioteca sigue usando una copia local del último resultado para recomendar recursos.
 
 ## Usuario de prueba
 
@@ -49,7 +47,7 @@ Debe aparecer algo como:
 
 ```text
 AS_New_InMotions backend local activo en http://localhost:3000/api
-Módulos activos: auth + moods
+Módulos activos: auth + moods + triage
 Usuario de prueba: estudiante@utb.edu.co / Test@12345
 ```
 
@@ -71,7 +69,7 @@ flutter run
 
 ## Modo backend/local
 
-La app quedó conectada al backend local para autenticación y registro emocional:
+La app quedó conectada al backend local para autenticación, registro emocional y triaje:
 
 ```text
 lib/core/constants/app_config.dart
@@ -97,7 +95,7 @@ Si usas un celular físico, reemplaza temporalmente la URL por la IP local de tu
 http://192.168.1.20:3000/api
 ```
 
-## Cómo comprobar el Paso 9 en la app
+## Cómo comprobar el Paso 10 en la app
 
 ### 1. Verificar backend activo
 
@@ -107,7 +105,13 @@ Abre en el navegador:
 http://localhost:3000/api/health
 ```
 
-Debe devolver que el backend está activo y mostrar módulos `auth` y `moods`.
+Debe devolver que el backend está activo y mostrar módulos:
+
+```text
+auth
+moods
+triage
+```
 
 ### 2. Probar login
 
@@ -126,71 +130,83 @@ Test@12345
 
 Debe entrar al Dashboard.
 
-### 3. Probar registro emocional con backend
+### 3. Probar carga de preguntas desde backend
 
 Abre:
 
 ```text
-Inicio → Registrar emoción
+Inicio → Triaje
 ```
 
-Guarda una emoción con nivel, etiquetas y nota.
+Debe aparecer:
+
+```text
+23 ítems · Últimas dos semanas · Escala de 1 a 5.
+```
+
+Eso confirma que el flujo está usando el banco oficial configurado para el backend.
+
+### 4. Probar resultado normal
+
+Responde todas las preguntas con opciones bajas, por ejemplo `No me identifico` o `Poco`.
 
 Debe pasar esto:
 
 ```text
-- Muestra mensaje de registro guardado.
-- Regresa al Dashboard.
-- El Dashboard muestra el estado emocional de hoy.
-- El archivo backend/data/local-moods.json se crea o actualiza.
+- La app muestra el resultado.
+- El puntaje se calcula desde el backend.
+- Se crea o actualiza backend/data/local-triage-results.json.
 ```
 
-### 4. Probar historial desde backend
+### 5. Probar protocolo crítico
 
-Abre:
+En alguna pregunta crítica:
 
 ```text
-Menú inferior → Historial
+A5, F1 o F2
 ```
 
-Debe aparecer el registro que acabas de guardar.
-
-### 5. Probar eliminación
-
-En Historial:
+Selecciona:
 
 ```text
-Toca un registro → Eliminar
+Bastante
 ```
 
-Debe desaparecer de la app y también del archivo:
+o
 
 ```text
-backend/data/local-moods.json
+Totalmente
 ```
-
-### 6. Probar separación por usuario
-
-Registra una cuenta nueva con otro correo `@utb.edu.co`, inicia sesión y abre Historial.
 
 Debe pasar esto:
 
 ```text
-- El usuario nuevo no ve los registros del usuario anterior.
-- Cada registro queda asociado al usuario autenticado.
+- El resultado muestra nivel Crítico.
+- El backend crea una derivación local.
+- Se actualiza backend/data/local-referrals.json.
 ```
+
+### 6. Probar Biblioteca recomendada
+
+Después de hacer un triaje, abre:
+
+```text
+Menú inferior → Biblioteca
+```
+
+Debe mostrar recomendaciones relacionadas con el último resultado guardado.
 
 ## Próximo paso sugerido
 
-**Paso 10: conectar triaje emocional al backend local**.
+**Paso 11: conectar biblioteca de recursos al backend local**.
 
 Cambios previstos:
 
 ```text
-- Crear endpoints /triage/questions y /triage/submit.
-- Mover las 23 preguntas oficiales al backend local.
-- Calcular puntaje oficial del triaje en el backend.
-- Guardar resultados de triaje por usuario autenticado.
-- Activar protocolo crítico en backend si A5, F1 o F2 tienen valor >= 4.
-- Mantener biblioteca y recordatorios todavía en local.
+- Crear endpoints /articles o /resources en el backend.
+- Mover el catálogo de recursos al backend local.
+- Consultar biblioteca desde API.
+- Mantener favoritos localmente o crear favoritos por usuario en backend.
+- Conservar filtros, búsqueda y detalle de recurso.
+- Mantener recordatorios todavía en local.
 ```

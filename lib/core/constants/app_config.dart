@@ -6,8 +6,8 @@ class AppConfig {
   static const String appSlogan = 'Tu bienestar mental en movimiento';
   static const String universityName = 'Universidad Tecnológica de Bolívar';
 
-  // Paso 8: backend local inicial.
-  // En true, login y registro usan el servidor local en /backend.
+  // Paso 10: backend local para auth, registro emocional y triaje.
+  // En true, estos módulos usan el servidor local en /backend.
   // Si quieres volver a modo 100% local, cambia este valor a false.
   static const bool useRemoteBackend = true;
   static const String localApiBaseUrl = 'http://10.0.2.2:3000/api';

@@ -15,6 +15,7 @@ class ApiEndpoints {
   static const String triageQuestions = '/triage/questions';
   static const String triageSubmit = '/triage/submit';
   static const String triageResults = '/triage/results';
+  static const String referrals = '/referrals';
 
   static const String resources = '/articles';
   static const String resourceCategories = '/articles/categories';

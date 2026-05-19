@@ -253,7 +253,7 @@ class _IntroNotice extends StatelessWidget {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Este test es una herramienta de orientación y no reemplaza una evaluación psicológica o psiquiátrica profesional. Los resultados se calculan localmente durante esta fase.',
+              'Este test es una herramienta de orientación y no reemplaza una evaluación psicológica o psiquiátrica profesional. El resultado oficial se calcula desde el backend local en esta fase.',
               style: TextStyle(color: AppColors.textDark, fontSize: 13.5, height: 1.35),
             ),
           ),

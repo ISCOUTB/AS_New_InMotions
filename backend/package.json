@@ -1,7 +1,7 @@
 {
   "name": "as-new-inmotions-backend-local",
   "version": "1.0.0",
-  "description": "Backend local para AS_New_InMotions con autenticación y registros emocionales sin nube.",
+  "description": "Backend local para AS_New_InMotions con autenticación, registros emocionales y triaje sin nube.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -12,7 +12,8 @@
     "utb",
     "backend-local",
     "auth",
-    "moods"
+    "moods",
+    "triage"
   ],
   "author": "AS_New_InMotions",
   "license": "MIT"
