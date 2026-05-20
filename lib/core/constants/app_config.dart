@@ -10,8 +10,10 @@ class AppConfig {
   // En true, estos módulos usan el servidor local en /backend.
   // Si quieres volver a modo 100% local, cambia este valor a false.
   static const bool useRemoteBackend = true;
-  static const String localApiBaseUrl = 'http://10.0.2.2:3000/api';
-  static const String webOrDesktopApiBaseUrl = 'http://localhost:3000/api';
+  static const String localApiBaseUrl =
+      'https://as-new-inmotions.onrender.com/api';
+  static const String webOrDesktopApiBaseUrl =
+      'https://as-new-inmotions.onrender.com/api';
 
   // Cuando el backend esté listo, este dominio también debe validarse en servidor.
   static const String institutionalDomain = '@utb.edu.co';
