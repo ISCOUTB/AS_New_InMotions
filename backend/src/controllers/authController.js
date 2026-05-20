@@ -2,7 +2,7 @@ const { readRequestBody, ok, created, fail } = require('../utils/http');
 const { createId, hashPassword, verifyPassword, createToken } = require('../utils/security');
 const { normalizeEmail, validateInstitutionalEmail, validatePassword, validateName } = require('../utils/validators');
 const { publicUser, sanitizeStoredUser } = require('../utils/presenters');
-const { readUsers, writeUsers } = require('../storage/localDatabase');
+const { findUserByEmail, findUserById, insertUser, updateUserLogin } = require('../storage/localDatabase');
 const { requireAuth } = require('../middleware/auth');
 
 async function register(req, res) {
@@ -19,8 +19,8 @@ async function register(req, res) {
   const passwordError = validatePassword(password);
   if (passwordError) return fail(res, 400, passwordError);
 
-  const users = readUsers();
-  if (users.some(user => normalizeEmail(user.email) === email)) return fail(res, 409, 'Ya existe una cuenta registrada con este correo');
+  const existing = await findUserByEmail(email);
+  if (existing) return fail(res, 409, 'Ya existe una cuenta registrada con este correo');
 
   const now = new Date().toISOString();
   const user = sanitizeStoredUser({
@@ -33,8 +33,7 @@ async function register(req, res) {
     lastLoginAt: now,
     passwordHash: hashPassword(password),
   });
-  users.push(user);
-  writeUsers(users);
+  await insertUser(user);
   created(res, { user: publicUser(user), token: createToken(user) }, 'Cuenta creada correctamente');
 }
 
@@ -48,15 +47,11 @@ async function login(req, res) {
   const passwordError = validatePassword(password);
   if (passwordError) return fail(res, 400, passwordError);
 
-  const users = readUsers();
-  const index = users.findIndex(user => normalizeEmail(user.email) === email);
-  if (index < 0) return fail(res, 401, 'Correo o contraseña incorrectos');
-  const user = users[index];
+  const user = await findUserByEmail(email);
+  if (!user) return fail(res, 401, 'Correo o contraseña incorrectos');
   if (!verifyPassword(password, user.passwordHash)) return fail(res, 401, 'Correo o contraseña incorrectos');
 
-  user.lastLoginAt = new Date().toISOString();
-  users[index] = user;
-  writeUsers(users);
+  await updateUserLogin(user.id);
   ok(res, { user: publicUser(user), token: createToken(user) }, 'Inicio de sesión correcto');
 }
 

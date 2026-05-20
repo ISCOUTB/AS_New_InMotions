@@ -4,24 +4,27 @@ const { requireAuth } = require('../middleware/auth');
 const { publicReminder } = require('../utils/presenters');
 const { validateReminderPayload } = require('../utils/validators');
 const { defaultSubtitleForReminderType, buildDefaultRemindersForUser } = require('../catalogs/reminderCatalog');
-const { readReminders, writeReminders, readDevices, writeDevices } = require('../storage/localDatabase');
+const {
+  readReminders, insertReminder, updateReminderById,
+  deleteReminderById, deleteRemindersByUser,
+  readDevices, upsertDevice,
+} = require('../storage/localDatabase');
 
-function ensureUserHasDefaultReminders(userId) {
-  const reminders = readReminders();
-  const hasAny = reminders.some(reminder => reminder.userId === userId);
+async function ensureUserHasDefaultReminders(userId) {
+  const all = await readReminders();
+  const hasAny = all.some(r => r.userId === userId);
   if (!hasAny) {
     const defaults = buildDefaultRemindersForUser(userId);
-    writeReminders([...reminders, ...defaults]);
+    for (const reminder of defaults) await insertReminder(reminder);
     return defaults;
   }
-  return reminders.filter(reminder => reminder.userId === userId);
+  return all.filter(r => r.userId === userId);
 }
 
-function getReminders(req, res) {
+async function getReminders(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
-  ensureUserHasDefaultReminders(user.id);
-  const reminders = readReminders().filter(reminder => reminder.userId === user.id).sort((a, b) => a.hour - b.hour || a.minute - b.minute);
+  const reminders = await ensureUserHasDefaultReminders(user.id);
   ok(res, { reminders: reminders.map(publicReminder) }, 'Recordatorios cargados');
 }
 
@@ -45,9 +48,7 @@ async function createReminder(req, res) {
     createdAt: now,
     updatedAt: now,
   };
-  const reminders = readReminders();
-  reminders.push(reminder);
-  writeReminders(reminders);
+  await insertReminder(reminder);
   created(res, { reminder: publicReminder(reminder) }, 'Recordatorio creado');
 }
 
@@ -57,10 +58,9 @@ async function updateReminder(req, res, reminderId) {
   const body = await readRequestBody(req);
   const validation = validateReminderPayload(body, { partial: true });
   if (validation.error) return fail(res, 400, validation.error);
-  const reminders = readReminders();
-  const index = reminders.findIndex(reminder => reminder.id === reminderId && reminder.userId === user.id);
-  if (index < 0) return fail(res, 404, 'Recordatorio no encontrado');
-  const current = reminders[index];
+  const all = await readReminders();
+  const current = all.find(r => r.id === reminderId && r.userId === user.id);
+  if (!current) return fail(res, 404, 'Recordatorio no encontrado');
   const updated = {
     ...current,
     ...validation,
@@ -68,28 +68,24 @@ async function updateReminder(req, res, reminderId) {
     subtitle: validation.subtitle || (validation.type ? defaultSubtitleForReminderType(validation.type) : current.subtitle),
     updatedAt: new Date().toISOString(),
   };
-  reminders[index] = updated;
-  writeReminders(reminders);
+  await updateReminderById(reminderId, user.id, updated);
   ok(res, { reminder: publicReminder(updated) }, 'Recordatorio actualizado');
 }
 
-function deleteReminder(req, res, reminderId) {
+async function deleteReminder(req, res, reminderId) {
   const user = requireAuth(req, res);
   if (!user) return;
-  const reminders = readReminders();
-  const index = reminders.findIndex(reminder => reminder.id === reminderId && reminder.userId === user.id);
-  if (index < 0) return fail(res, 404, 'Recordatorio no encontrado');
-  reminders.splice(index, 1);
-  writeReminders(reminders);
+  const deleted = await deleteReminderById(reminderId, user.id);
+  if (!deleted) return fail(res, 404, 'Recordatorio no encontrado');
   ok(res, null, 'Recordatorio eliminado');
 }
 
-function resetReminders(req, res) {
+async function resetReminders(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
-  const others = readReminders().filter(reminder => reminder.userId !== user.id);
+  await deleteRemindersByUser(user.id);
   const defaults = buildDefaultRemindersForUser(user.id);
-  writeReminders([...others, ...defaults]);
+  for (const reminder of defaults) await insertReminder(reminder);
   ok(res, { reminders: defaults.map(publicReminder) }, 'Recordatorios restaurados');
 }
 
@@ -100,14 +96,9 @@ async function registerDevice(req, res) {
   const token = String(body.token || '').trim();
   if (!token) return fail(res, 400, 'El token del dispositivo es obligatorio');
   const platform = String(body.platform || 'unknown').trim();
-  const devices = readDevices();
   const now = new Date().toISOString();
-  const index = devices.findIndex(device => device.userId === user.id && device.token === token);
-  const device = { userId: user.id, token, platform, updatedAt: now, createdAt: index >= 0 ? devices[index].createdAt : now };
-  if (index >= 0) devices[index] = device;
-  else devices.push(device);
-  writeDevices(devices);
-  ok(res, { registered: true }, 'Dispositivo registrado localmente');
+  await upsertDevice({ userId: user.id, token, platform, createdAt: now, updatedAt: now });
+  ok(res, { registered: true }, 'Dispositivo registrado');
 }
 
 module.exports = { getReminders, createReminder, updateReminder, deleteReminder, resetReminders, registerDevice };

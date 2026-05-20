@@ -1,154 +1,57 @@
 const pool = require('../config/database');
 const { hashPassword } = require('../utils/security');
 
-const DEMO_USER = {
-  id: 'demo-user-utb',
-  full_name: 'Estudiante UTB',
-  email: 'estudiante@utb.edu.co',
-  phone: null,
-  role: 'student',
-  password_hash: null, // se genera abajo
-};
+// ─── INIT ────────────────────────────────────────────────────────────────────
 
 async function ensureDataFiles() {
   try {
-    // Insertar usuario demo si no existe
     const passwordHash = hashPassword('Test@12345');
-    DEMO_USER.password_hash = passwordHash;
-
     await pool.execute(
-      `INSERT IGNORE INTO usuarios (id, full_name, email, phone, role, password_hash)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [DEMO_USER.id, DEMO_USER.full_name, DEMO_USER.email, DEMO_USER.phone, DEMO_USER.role, DEMO_USER.password_hash]
+      `INSERT IGNORE INTO usuarios (id, full_name, email, phone, role, password_hash, created_at, last_login_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      ['demo-user-utb', 'Estudiante UTB', 'estudiante@utb.edu.co', null, 'student', passwordHash]
     );
-    console.log('✅ Base de datos MariaDB conectada correctamente');
+    console.log('✅ Base de datos CleverCloud conectada correctamente');
   } catch (err) {
-    console.error('❌ Error conectando a MariaDB:', err.message);
+    console.error('❌ Error conectando a la base de datos:', err.message);
     throw err;
   }
 }
 
-// ─── USUARIOS ───────────────────────────────────────────
-const readUsers = async () => {
+// ─── USUARIOS ────────────────────────────────────────────────────────────────
+
+async function readUsers() {
   const [rows] = await pool.execute('SELECT * FROM usuarios');
   return rows.map(dbUserToApp);
-};
+}
 
-const writeUsers = async (users) => {
-  for (const user of users) {
-    await pool.execute(
-      `INSERT INTO usuarios (id, full_name, email, phone, role, password_hash, created_at, last_login_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         full_name=VALUES(full_name), phone=VALUES(phone), role=VALUES(role),
-         password_hash=VALUES(password_hash), last_login_at=VALUES(last_login_at)`,
-      [user.id, user.fullName, user.email, user.phone || null, user.role, user.passwordHash, user.createdAt, user.lastLoginAt || null]
-    );
-  }
-};
+async function writeUsers(users) {
+  // No se usa directamente — se usan funciones específicas
+}
 
-// ─── MOODS ──────────────────────────────────────────────
-const readMoods = async () => {
-  const [rows] = await pool.execute('SELECT * FROM moods');
-  return rows.map(r => ({ id: r.id, userId: r.user_id, mood: r.mood, note: r.note, createdAt: r.created_at }));
-};
+async function findUserByEmail(email) {
+  const [rows] = await pool.execute('SELECT * FROM usuarios WHERE email = ?', [email]);
+  return rows.length ? dbUserToApp(rows[0]) : null;
+}
 
-const writeMoods = async (moods) => {
-  for (const m of moods) {
-    await pool.execute(
-      `INSERT INTO moods (id, user_id, mood, note, created_at)
-       VALUES (?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE mood=VALUES(mood), note=VALUES(note)`,
-      [m.id, m.userId, m.mood, m.note || null, m.createdAt]
-    );
-  }
-};
+async function findUserById(id) {
+  const [rows] = await pool.execute('SELECT * FROM usuarios WHERE id = ?', [id]);
+  return rows.length ? dbUserToApp(rows[0]) : null;
+}
 
-// ─── TRIAGE RESULTS ─────────────────────────────────────
-const readTriageResults = async () => {
-  const [rows] = await pool.execute('SELECT * FROM triage_results');
-  return rows.map(r => ({ id: r.id, userId: r.user_id, score: r.score, level: r.level, answers: JSON.parse(r.answers || '[]'), createdAt: r.created_at }));
-};
+async function insertUser(user) {
+  await pool.execute(
+    `INSERT INTO usuarios (id, full_name, email, phone, role, password_hash, created_at, last_login_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [user.id, user.fullName, user.email, user.phone || null, user.role, user.passwordHash, user.createdAt, user.lastLoginAt]
+  );
+  return user;
+}
 
-const writeTriageResults = async (results) => {
-  for (const r of results) {
-    await pool.execute(
-      `INSERT INTO triage_results (id, user_id, score, level, answers, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE score=VALUES(score), level=VALUES(level), answers=VALUES(answers)`,
-      [r.id, r.userId, r.score, r.level, JSON.stringify(r.answers || []), r.createdAt]
-    );
-  }
-};
+async function updateUserLogin(id) {
+  await pool.execute('UPDATE usuarios SET last_login_at = NOW() WHERE id = ?', [id]);
+}
 
-// ─── REFERRALS ──────────────────────────────────────────
-const readReferrals = async () => {
-  const [rows] = await pool.execute('SELECT * FROM referrals');
-  return rows.map(r => ({ id: r.id, userId: r.user_id, reason: r.reason, status: r.status, createdAt: r.created_at }));
-};
-
-const writeReferrals = async (referrals) => {
-  for (const r of referrals) {
-    await pool.execute(
-      `INSERT INTO referrals (id, user_id, reason, status, created_at)
-       VALUES (?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE reason=VALUES(reason), status=VALUES(status)`,
-      [r.id, r.userId, r.reason || null, r.status || 'pending', r.createdAt]
-    );
-  }
-};
-
-// ─── RESOURCE FAVORITES ─────────────────────────────────
-const readResourceFavorites = async () => {
-  const [rows] = await pool.execute('SELECT * FROM resource_favorites');
-  return rows.map(r => ({ id: r.id, userId: r.user_id, articleId: r.article_id, createdAt: r.created_at }));
-};
-
-const writeResourceFavorites = async (favorites) => {
-  for (const f of favorites) {
-    await pool.execute(
-      `INSERT IGNORE INTO resource_favorites (id, user_id, article_id, created_at)
-       VALUES (?, ?, ?, ?)`,
-      [f.id, f.userId, f.articleId, f.createdAt]
-    );
-  }
-};
-
-// ─── REMINDERS ──────────────────────────────────────────
-const readReminders = async () => {
-  const [rows] = await pool.execute('SELECT * FROM reminders');
-  return rows.map(r => ({ id: r.id, userId: r.user_id, title: r.title, time: r.time, active: !!r.active, createdAt: r.created_at }));
-};
-
-const writeReminders = async (reminders) => {
-  for (const r of reminders) {
-    await pool.execute(
-      `INSERT INTO reminders (id, user_id, title, time, active, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE title=VALUES(title), time=VALUES(time), active=VALUES(active)`,
-      [r.id, r.userId, r.title, r.time || null, r.active ? 1 : 0, r.createdAt]
-    );
-  }
-};
-
-// ─── DEVICES ────────────────────────────────────────────
-const readDevices = async () => {
-  const [rows] = await pool.execute('SELECT * FROM devices');
-  return rows.map(r => ({ id: r.id, userId: r.user_id, token: r.token, platform: r.platform, createdAt: r.created_at }));
-};
-
-const writeDevices = async (devices) => {
-  for (const d of devices) {
-    await pool.execute(
-      `INSERT INTO devices (id, user_id, token, platform, created_at)
-       VALUES (?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE token=VALUES(token), platform=VALUES(platform)`,
-      [d.id, d.userId, d.token, d.platform || null, d.createdAt]
-    );
-  }
-};
-
-// ─── HELPERS ────────────────────────────────────────────
 function dbUserToApp(row) {
   return {
     id: row.id,
@@ -162,13 +65,259 @@ function dbUserToApp(row) {
   };
 }
 
+// ─── MOODS ───────────────────────────────────────────────────────────────────
+
+async function readMoods() {
+  const [rows] = await pool.execute('SELECT * FROM moods ORDER BY created_at DESC');
+  return rows.map(dbMoodToApp);
+}
+
+async function writeMoods(moods) {
+  // No se usa directamente
+}
+
+async function insertMood(mood) {
+  await pool.execute(
+    `INSERT INTO moods (id, user_id, level, note, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [mood.id, mood.userId, mood.level, mood.note || null, mood.createdAt, mood.updatedAt]
+  );
+}
+
+async function deleteMoodById(id, userId) {
+  const [result] = await pool.execute('DELETE FROM moods WHERE id = ? AND user_id = ?', [id, userId]);
+  return result.affectedRows > 0;
+}
+
+async function readMoodsByUser(userId) {
+  const [rows] = await pool.execute('SELECT * FROM moods WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+  return rows.map(dbMoodToApp);
+}
+
+function dbMoodToApp(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    level: row.level,
+    note: row.note,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// ─── TRIAGE ──────────────────────────────────────────────────────────────────
+
+async function readTriageResults() {
+  const [rows] = await pool.execute('SELECT * FROM triage_results ORDER BY created_at DESC');
+  return rows.map(dbTriageToApp);
+}
+
+async function writeTriageResults(results) {
+  // No se usa directamente
+}
+
+async function insertTriageResult(result) {
+  await pool.execute(
+    `INSERT INTO triage_results (id, user_id, score, risk_level, requires_referral, answers, recommendations, referral_status, is_critical_protocol, critical_question_ids, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      result.id, result.userId, result.score, result.riskLevel,
+      result.requiresReferral ? 1 : 0,
+      JSON.stringify(result.answers),
+      JSON.stringify(result.recommendations),
+      result.referralStatus || null,
+      result.isCriticalProtocol ? 1 : 0,
+      JSON.stringify(result.criticalQuestionIds),
+      result.createdAt,
+    ]
+  );
+}
+
+async function updateTriageReferralStatus(id, status) {
+  await pool.execute('UPDATE triage_results SET referral_status = ? WHERE id = ?', [status, id]);
+}
+
+function dbTriageToApp(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    score: row.score,
+    riskLevel: row.risk_level,
+    requiresReferral: !!row.requires_referral,
+    answers: typeof row.answers === 'string' ? JSON.parse(row.answers) : row.answers,
+    recommendations: typeof row.recommendations === 'string' ? JSON.parse(row.recommendations) : row.recommendations,
+    referralStatus: row.referral_status,
+    isCriticalProtocol: !!row.is_critical_protocol,
+    criticalQuestionIds: typeof row.critical_question_ids === 'string' ? JSON.parse(row.critical_question_ids) : row.critical_question_ids,
+    createdAt: row.created_at,
+  };
+}
+
+// ─── REFERRALS ───────────────────────────────────────────────────────────────
+
+async function readReferrals() {
+  const [rows] = await pool.execute('SELECT * FROM referrals ORDER BY created_at DESC');
+  return rows.map(dbReferralToApp);
+}
+
+async function writeReferrals(referrals) {
+  // No se usa directamente
+}
+
+async function insertReferral(referral) {
+  await pool.execute(
+    `INSERT INTO referrals (id, user_id, triage_result_id, score, risk_level, status, method, psychology_email, message, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      referral.id, referral.userId, referral.triageResultId, referral.score,
+      referral.riskLevel, referral.status, referral.method,
+      referral.psychologyEmail, referral.message,
+      referral.createdAt, referral.updatedAt,
+    ]
+  );
+}
+
+function dbReferralToApp(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    triageResultId: row.triage_result_id,
+    score: row.score,
+    riskLevel: row.risk_level,
+    status: row.status,
+    method: row.method,
+    psychologyEmail: row.psychology_email,
+    message: row.message,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// ─── REMINDERS ───────────────────────────────────────────────────────────────
+
+async function readReminders() {
+  const [rows] = await pool.execute('SELECT * FROM reminders ORDER BY hour ASC, minute ASC');
+  return rows.map(dbReminderToApp);
+}
+
+async function writeReminders(reminders) {
+  // No se usa directamente
+}
+
+async function insertReminder(reminder) {
+  await pool.execute(
+    `INSERT INTO reminders (id, user_id, type, title, subtitle, hour, minute, days, enabled, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      reminder.id, reminder.userId, reminder.type, reminder.title,
+      reminder.subtitle, reminder.hour, reminder.minute,
+      JSON.stringify(reminder.days), reminder.enabled ? 1 : 0,
+      reminder.createdAt, reminder.updatedAt,
+    ]
+  );
+}
+
+async function updateReminderById(id, userId, fields) {
+  await pool.execute(
+    `UPDATE reminders SET type=?, title=?, subtitle=?, hour=?, minute=?, days=?, enabled=?, updated_at=? WHERE id=? AND user_id=?`,
+    [
+      fields.type, fields.title, fields.subtitle, fields.hour, fields.minute,
+      JSON.stringify(fields.days), fields.enabled ? 1 : 0, fields.updatedAt, id, userId,
+    ]
+  );
+}
+
+async function deleteReminderById(id, userId) {
+  const [result] = await pool.execute('DELETE FROM reminders WHERE id = ? AND user_id = ?', [id, userId]);
+  return result.affectedRows > 0;
+}
+
+async function deleteRemindersByUser(userId) {
+  await pool.execute('DELETE FROM reminders WHERE user_id = ?', [userId]);
+}
+
+function dbReminderToApp(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    title: row.title,
+    subtitle: row.subtitle,
+    hour: row.hour,
+    minute: row.minute,
+    days: typeof row.days === 'string' ? JSON.parse(row.days) : row.days,
+    enabled: !!row.enabled,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// ─── DEVICES ─────────────────────────────────────────────────────────────────
+
+async function readDevices() {
+  const [rows] = await pool.execute('SELECT * FROM devices');
+  return rows.map(dbDeviceToApp);
+}
+
+async function writeDevices(devices) {
+  // No se usa directamente
+}
+
+async function upsertDevice(device) {
+  await pool.execute(
+    `INSERT INTO devices (user_id, token, platform, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE platform=VALUES(platform), updated_at=VALUES(updated_at)`,
+    [device.userId, device.token, device.platform, device.createdAt, device.updatedAt]
+  );
+}
+
+function dbDeviceToApp(row) {
+  return {
+    userId: row.user_id,
+    token: row.token,
+    platform: row.platform,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// ─── RESOURCE FAVORITES ──────────────────────────────────────────────────────
+
+async function readResourceFavorites() {
+  const [rows] = await pool.execute('SELECT * FROM resource_favorites');
+  return rows.map(row => ({ userId: row.user_id, resourceId: row.resource_id, createdAt: row.created_at }));
+}
+
+async function writeResourceFavorites(favorites) {
+  // No se usa directamente
+}
+
+async function insertResourceFavorite(userId, resourceId) {
+  await pool.execute(
+    `INSERT IGNORE INTO resource_favorites (user_id, resource_id, created_at) VALUES (?, ?, NOW())`,
+    [userId, resourceId]
+  );
+}
+
+async function deleteResourceFavorite(userId, resourceId) {
+  await pool.execute('DELETE FROM resource_favorites WHERE user_id = ? AND resource_id = ?', [userId, resourceId]);
+}
+
 module.exports = {
   ensureDataFiles,
-  readUsers, writeUsers,
-  readMoods, writeMoods,
-  readTriageResults, writeTriageResults,
-  readReferrals, writeReferrals,
-  readResourceFavorites, writeResourceFavorites,
-  readReminders, writeReminders,
-  readDevices, writeDevices,
+  // usuarios
+  readUsers, writeUsers, findUserByEmail, findUserById, insertUser, updateUserLogin,
+  // moods
+  readMoods, writeMoods, insertMood, deleteMoodById, readMoodsByUser,
+  // triage
+  readTriageResults, writeTriageResults, insertTriageResult, updateTriageReferralStatus,
+  // referrals
+  readReferrals, writeReferrals, insertReferral,
+  // reminders
+  readReminders, writeReminders, insertReminder, updateReminderById, deleteReminderById, deleteRemindersByUser,
+  // devices
+  readDevices, writeDevices, upsertDevice,
+  // resource favorites
+  readResourceFavorites, writeResourceFavorites, insertResourceFavorite, deleteResourceFavorite,
 };

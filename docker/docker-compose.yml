@@ -17,24 +17,24 @@ services:
       - inmotions_net
 
   backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-    container_name: inmotions_backend
-    restart: unless-stopped
-    environment:
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      PORT: 3000
-    ports:
-      - "3000:3000"
-    depends_on:
-      - mariadb
-    networks:
-      - inmotions_net
+  build:
+    context: ../backend
+    dockerfile: Dockerfile
+  container_name: inmotions_backend
+  restart: unless-stopped
+  environment:
+    DB_HOST: ${DB_HOST}        # ← cambia "mariadb" por esto
+    DB_PORT: ${DB_PORT}        # ← cambia 3306 por esto
+    DB_USER: ${DB_USER}
+    DB_PASSWORD: ${DB_PASSWORD}
+    DB_NAME: ${DB_NAME}
+    PORT: 3000
+  ports:
+    - "3000:3000"
+  depends_on:
+    - mariadb
+  networks:
+    - inmotions_net
 
   phpmyadmin:
     image: phpmyadmin:latest
